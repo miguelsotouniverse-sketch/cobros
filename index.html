@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cobros — Dr. Miguel Soto</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <style>
+    :root {
+      --bg: #f1ebe1;
+      --bg-soft: #ebe4d6;
+      --card: #ffffff;
+      --border: #d8cfbf;
+      --border-soft: #ebe4d6;
+      --text: #1a1a1a;
+      --text-muted: #8a8378;
+      --text-faint: #b3a895;
+      --black: #1a1a1a;
+      --accent: #b09372;
+      --accent-dark: #8e7456;
+      --success: #5a7a4e;
+      --error: #a13a3a;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.03);
+      --shadow-md: 0 2px 12px rgba(0,0,0,0.06);
+      --serif: 'Playfair Display', Georgia, serif;
+      --sans: 'Inter', -apple-system, system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      background: var(--bg); font-family: var(--sans); color: var(--text);
+      font-size: 14px; line-height: 1.5; min-height: 100vh; -webkit-font-smoothing: antialiased;
+    }
+    .hidden { display: none !important; }
+    .serif { font-family: var(--serif); font-weight: 400; }
+    .muted { color: var(--text-muted); }
+    .small { font-size: 0.8rem; }
+
+    /* TOP BAR */
+    .topbar { display: flex; align-items: center; justify-content: center; padding: 14px 24px; gap: 18px; font-size: 0.72rem; color: var(--text-muted); background: var(--bg); }
+    .topbar .email { letter-spacing: 0.04em; }
+    .topbar .salir { color: var(--text); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; background: none; border: 0; padding: 0; font-size: inherit; font-family: inherit; }
+    .topbar .salir:hover { color: var(--accent-dark); }
+
+    /* HERO */
+    .hero { background: var(--black); color: #fff; padding: 26px 40px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 24px; }
+    .hero-left .step-num { font-family: var(--serif); font-size: 0.75rem; letter-spacing: 0.18em; color: #b3a895; }
+    .hero-left .step-name { font-size: 0.72rem; letter-spacing: 0.22em; text-transform: uppercase; color: #fff; margin-top: 2px; font-weight: 500; }
+    .hero-logo-img { height: 56px; width: auto; display: block; margin: 0 auto; }
+    .hero-right { text-align: right; }
+    .hero-right .doc-name { font-size: 0.72rem; letter-spacing: 0.22em; text-transform: uppercase; font-weight: 500; }
+    .hero-right .doc-title { font-size: 0.68rem; letter-spacing: 0.18em; text-transform: uppercase; color: #b3a895; margin-top: 2px; }
+
+    /* MAIN */
+    main { max-width: 720px; margin: 48px auto; padding: 0 24px; }
+    .view-title { font-family: var(--serif); font-size: 2rem; font-weight: 400; text-align: center; margin: 0 0 8px 0; letter-spacing: -0.01em; }
+    .view-subtitle { text-align: center; color: var(--text-muted); font-size: 0.72rem; letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 36px; }
+    .card { background: var(--card); border: 1px solid var(--border-soft); border-radius: 4px; padding: 28px; box-shadow: var(--shadow-sm); }
+
+    /* FORM */
+    label.lbl { display: block; font-size: 0.7rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; font-weight: 500; }
+    input[type="text"], input[type="number"], select {
+      width: 100%; padding: 12px 14px; font-family: var(--sans); font-size: 0.92rem; color: var(--text);
+      background: #fff; border: 1px solid var(--border); border-radius: 3px; outline: none; transition: border-color 0.15s;
+    }
+    input:focus, select:focus { border-color: var(--accent); }
+    input::placeholder { color: var(--text-faint); }
+    select { cursor: pointer; appearance: none; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path fill='%238a8378' d='M6 8L0 0h12z'/></svg>"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
+    .form-group { margin-bottom: 18px; }
+    .grid2 { display: grid; gap: 16px; grid-template-columns: 1fr 1fr; }
+    .grid3 { display: grid; gap: 16px; grid-template-columns: 1fr 1fr 1fr; }
+    @media (max-width: 600px) { .grid2, .grid3 { grid-template-columns: 1fr; } }
+
+    /* BUSCADOR DE PACIENTE */
+    .buscador { position: relative; }
+    .resultados { position: absolute; left: 0; right: 0; top: calc(100% + 4px); background: #fff; border: 1px solid var(--border); border-radius: 3px; box-shadow: var(--shadow-md); z-index: 50; max-height: 320px; overflow-y: auto; }
+    .resultados > div { padding: 12px 16px; cursor: pointer; border-bottom: 1px solid var(--border-soft); transition: background 0.1s; }
+    .resultados > div:last-child { border-bottom: 0; }
+    .resultados > div:hover { background: var(--bg-soft); }
+    .resultados .rid { color: var(--text-muted); font-size: 0.72rem; letter-spacing: 0.08em; margin-top: 2px; }
+    .pac-sel { display: flex; align-items: center; justify-content: space-between; gap: 16px; background: var(--bg-soft); border: 1px solid var(--border-soft); border-radius: 3px; padding: 14px 18px; margin-top: 4px; }
+    .pac-sel .pac-nombre { font-family: var(--serif); font-size: 1.1rem; }
+    .link { background: none; border: 0; color: var(--accent-dark); cursor: pointer; font-family: var(--sans); font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 500; }
+    .link:hover { color: var(--text); }
+    .aviso { background: #fbf3e6; border: 1px solid #e8d9bc; color: #8a6d3b; border-radius: 3px; padding: 14px 16px; margin-top: 8px; font-size: 0.86rem; }
+    .fac-item { border: 1px solid var(--border-soft); border-radius: 3px; padding: 16px 18px; margin-bottom: 16px; background: var(--bg-soft); }
+    .fac-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .exito-banner { background: #e7f6ec; border: 1px solid #b7e0c4; color: #1e7e42; font-size: 1.15rem; font-weight: 600; text-align: center; padding: 18px 20px; border-radius: 4px; margin-bottom: 20px; letter-spacing: 0.3px; }
+
+    /* BUTTONS */
+    .btn { display: inline-flex; align-items: center; justify-content: center; padding: 13px 28px; font-family: var(--sans); font-size: 0.72rem; letter-spacing: 0.18em; text-transform: uppercase; font-weight: 500; border: 0; border-radius: 3px; cursor: pointer; transition: all 0.15s; gap: 8px; }
+    .btn-primary { background: var(--black); color: #fff; width: 100%; margin-top: 8px; }
+    .btn-primary:hover:not(:disabled) { background: #000; }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-secondary { background: transparent; color: var(--text); border: 1px solid var(--border); }
+    .btn-secondary:hover { background: var(--bg-soft); border-color: var(--accent); }
+
+    .section-label { font-family: var(--serif); font-size: 1.15rem; margin: 26px 0 14px; }
+    .section-label:first-child { margin-top: 0; }
+    .preview-mxn { color: var(--accent-dark); font-size: 0.85rem; margin-top: -8px; margin-bottom: 8px; }
+
+    /* ALERTS */
+    .alert { padding: 14px 18px; border-radius: 3px; margin-top: 16px; font-size: 0.88rem; }
+    .alert-error { background: #fbe6e6; border: 1px solid #e7c3c3; color: var(--error); }
+
+    /* LOGIN */
+    .login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .login-card { background: #fff; border: 1px solid var(--border-soft); border-radius: 6px; padding: 48px 40px; max-width: 420px; width: 100%; text-align: center; box-shadow: var(--shadow-md); }
+    .login-card .login-logo-img { height: 96px; width: auto; margin: 0 auto 8px; display: block; }
+    .login-card .login-doc { font-size: 0.7rem; letter-spacing: 0.22em; color: var(--text-muted); text-transform: uppercase; margin-bottom: 32px; }
+    .login-card h1 { font-family: var(--serif); font-size: 1.6rem; font-weight: 400; margin: 0 0 6px 0; }
+    .login-card .login-sub { color: var(--text-muted); font-size: 0.72rem; letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 28px; }
+    .login-card .login-error { color: var(--error); font-size: 0.82rem; margin-top: 16px; min-height: 18px; }
+    .login-card .login-note { color: var(--text-muted); font-size: 0.78rem; margin-top: 24px; line-height: 1.5; font-style: italic; }
+    #google-signin-btn { display: flex; justify-content: center; margin-top: 8px; }
+
+    /* RECIBO */
+    .recibo { border: 1px solid var(--border); border-radius: 4px; padding: 28px; }
+    .recibo .rb-h { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--border-soft); padding-bottom: 16px; margin-bottom: 16px; }
+    .recibo .brand { font-family: var(--serif); font-size: 1.1rem; letter-spacing: 0.04em; }
+    .recibo .sub { font-size: 0.62rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-muted); margin-top: 2px; }
+    .recibo .doc-tag { font-size: 0.62rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-muted); text-align: right; }
+    .recibo .folio { font-family: var(--serif); font-size: 1.2rem; color: var(--accent-dark); text-align: right; margin-top: 2px; }
+    .recibo table { width: 100%; border-collapse: collapse; }
+    .recibo td { padding: 8px 0; border-bottom: 1px solid var(--border-soft); font-size: 0.9rem; vertical-align: top; }
+    .recibo td.k { color: var(--text-muted); width: 42%; font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; padding-top: 11px; }
+    .recibo td.total { font-family: var(--serif); font-size: 1.15rem; color: var(--text); border-bottom: 0; padding-top: 14px; }
+    .recibo .pie { color: var(--text-muted); font-size: 0.78rem; margin-top: 16px; font-style: italic; }
+    .acciones { display: flex; gap: 12px; justify-content: center; margin-top: 24px; }
+
+    @media (max-width: 600px) {
+      .hero { padding: 18px 20px; grid-template-columns: 1fr; text-align: center; gap: 12px; }
+      .hero-right, .hero-left { text-align: center; }
+      main { margin: 24px auto; padding: 0 16px; }
+      .view-title { font-size: 1.5rem; }
+      .card { padding: 20px; }
+    }
+
+    /* IMPRESIÓN: solo el recibo */
+    @media print {
+      body { background: #fff; }
+      .topbar, .hero, .view-title, .view-subtitle, .acciones, .noprint { display: none !important; }
+      main { margin: 0; max-width: 100%; }
+      .card { border: 0; box-shadow: none; padding: 0; }
+      .recibo { border: 0; padding: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen" class="login-screen">
+  <div class="login-card">
+    <img src="logo_ms_black.png" alt="Dr. Miguel Soto" class="login-logo-img">
+    <div class="login-doc">Dr. Miguel Soto · Cirujano Plástico</div>
+    <h1 class="serif">Ventanilla de Cobros</h1>
+    <div class="login-sub">Inicia sesión con tu cuenta autorizada</div>
+    <div id="google-signin-btn"></div>
+    <div class="login-error" id="login-error"></div>
+    <div class="login-note">Solo cuentas autorizadas por el Dr. Soto pueden registrar cobros.</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app-wrapper" class="hidden">
+  <header class="topbar">
+    <span class="email" id="topbar-email">—</span>
+    <span style="opacity: 0.4;">·</span>
+    <button class="salir hidden" id="btn-facturas" onclick="abrirFacturas()">facturas pendientes</button>
+    <button class="salir hidden" id="btn-volver-cobro" onclick="volverACobro()">← cobros</button>
+    <button class="salir" id="btn-salir">salir</button>
+  </header>
+
+  <div class="hero">
+    <div class="hero-left">
+      <div class="step-num">REGISTRO DE COBRO</div>
+      <div class="step-name" id="hero-step">Recepción</div>
+    </div>
+    <img src="logo_ms_white.png" alt="MS" class="hero-logo-img">
+    <div class="hero-right">
+      <div class="doc-name">Dr. Miguel Soto</div>
+      <div class="doc-title">Cirujano Plástico Certificado</div>
+    </div>
+  </div>
+
+  <main>
+    <!-- COBRO -->
+    <section id="view-cobro">
+      <h1 class="view-title serif">Registrar cobro</h1>
+      <div class="view-subtitle">Selecciona al paciente de la base</div>
+
+      <div class="card">
+        <div class="section-label serif">Paciente</div>
+        <div class="form-group">
+          <label class="lbl">Buscar por nombre</label>
+          <div class="buscador">
+            <input type="text" id="buscaPac" autocomplete="off" placeholder="Escribe el nombre y elige de la lista…">
+            <div id="resultados" class="resultados hidden"></div>
+          </div>
+          <div id="pacSel" class="pac-sel hidden">
+            <div>
+              <div id="pacNombre" class="pac-nombre"></div>
+              <div id="pacMeta" class="muted small"></div>
+            </div>
+            <button type="button" class="link" onclick="limpiarPaciente()">Cambiar</button>
+          </div>
+          <div id="pacNoExiste" class="aviso hidden">
+            ¿No aparece? Debe darse de alta primero en
+            <b>altapacientes.miguelsotomd.com</b>. No se puede cobrar a un paciente que no está en la base.
+          </div>
+        </div>
+
+        <div class="section-label serif">Concepto</div>
+        <div class="grid2">
+          <div class="form-group"><label class="lbl">Línea de negocio</label><select id="linea"></select></div>
+          <div class="form-group"><label class="lbl">Tratamiento / concepto</label><input type="text" id="tratamiento" placeholder="Ej. Botox Full Face"></div>
+        </div>
+        <div class="grid2">
+          <div class="form-group"><label class="lbl">Área de tratamiento</label><input type="text" id="area" placeholder="Ej. Endo-Cara, Body Shaping"></div>
+          <div class="form-group"><label class="lbl">Médico titular</label><select id="medico"></select></div>
+        </div>
+        <div class="form-group"><label class="lbl">Operativo / quién atendió</label><select id="operativo"></select></div>
+
+        <div class="section-label serif">Equipo de venta</div>
+        <div class="grid2">
+          <div class="form-group"><label class="lbl">Prospecta</label><select id="prospecta"></select></div>
+          <div class="form-group"><label class="lbl">Cierra</label><select id="cierra"></select></div>
+        </div>
+        <div class="form-group"><label class="lbl">Condición de pago</label><select id="condicion"></select></div>
+
+        <div class="section-label serif">Pago</div>
+        <div class="grid2">
+          <div class="form-group"><label class="lbl">Método de pago</label><select id="metodo"></select></div>
+          <div class="form-group"><label class="lbl">Terminal / cuenta</label><select id="terminal"></select></div>
+        </div>
+        <div class="grid3">
+          <div class="form-group"><label class="lbl">Moneda</label><select id="moneda"></select></div>
+          <div class="form-group"><label class="lbl" id="lblMonto">Monto</label><input type="number" id="monto" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></div>
+          <div class="form-group hidden" id="boxTC"><label class="lbl">Tipo de cambio</label><input type="number" id="tc" min="0" step="0.0001" inputmode="decimal" placeholder="0.0000"></div>
+        </div>
+        <div id="previewMXN" class="preview-mxn hidden"></div>
+
+        <div class="grid2">
+          <div class="form-group"><label class="lbl">¿Factura?</label><select id="factura"><option>No</option><option>Sí</option></select></div>
+          <div class="form-group hidden" id="boxNumFactura"><label class="lbl">No. de factura</label><input type="text" id="numFactura" placeholder="Folio fiscal / número"></div>
+        </div>
+
+        <div class="form-group"><label class="lbl">Observaciones</label><input type="text" id="obs" placeholder="Notas del cobro"></div>
+
+        <button class="btn btn-primary" id="btnCobrar" onclick="enviarCobro()">Registrar cobro</button>
+        <div id="msg" class="alert alert-error hidden"></div>
+      </div>
+    </section>
+
+    <!-- RECIBO -->
+    <section id="view-recibo" class="hidden">
+      <div class="exito-banner noprint">✓ Cobro registrado exitosamente</div>
+      <h1 class="view-title serif noprint">Cobro registrado</h1>
+      <div class="view-subtitle noprint">Entrega este comprobante al paciente</div>
+      <div class="card">
+        <div id="reciboArea"></div>
+        <div class="acciones noprint">
+          <button class="btn btn-secondary" onclick="imprimir()">Imprimir recibo</button>
+          <button class="btn btn-primary" style="width:auto;margin-top:0;" onclick="nuevoCobro()">Nuevo cobro</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- FACTURAS PENDIENTES -->
+    <section id="view-facturas" class="hidden">
+      <h1 class="view-title serif">Facturas pendientes</h1>
+      <div class="view-subtitle">Cobros marcados con factura que aún no tienen número</div>
+      <div class="card">
+        <div id="facturasLista"></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+// ============================================================
+// CONFIG — confirma estas dos líneas antes de publicar
+// ============================================================
+const API_URL = 'https://script.google.com/macros/s/AKfycbw7g9OMUl2fj1MPVbzR-lmgo57befXHvML6vLwKbupNRK3c1lNgP1mqH2lkXqX5yHY6Jw/exec';
+const CLIENT_ID = '853020443669-kqupvoouc7721osm7b3tj67d42ofpdnn.apps.googleusercontent.com';
+
+// ============================================================
+// STATE
+// ============================================================
+let googleToken = localStorage.getItem('vc_token') || '';
+let userEmail = '';
+let catalogos = {};
+let PAC = null;
+let BUSCANDO = null;
+let ENVIANDO = false;
+
+const $ = id => document.getElementById(id);
+const show = id => $(id).classList.remove('hidden');
+const hide = id => $(id).classList.add('hidden');
+
+function decodeJWT(token) {
+  try {
+    const payload = token.split('.')[1];
+    const decoded = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
+    return JSON.parse(decodeURIComponent(escape(decoded)));
+  } catch (e) { return null; }
+}
+
+async function callAPI(action, payload = {}) {
+  if (!googleToken) return { ok: false, error: 'No hay sesión activa' };
+  const body = JSON.stringify({ token: googleToken, action, ...payload });
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      redirect: 'follow',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body
+    });
+    const txt = await res.text();
+    try {
+      return JSON.parse(txt);
+    } catch (parseErr) {
+      return { ok: false, error: 'Respuesta inesperada del servidor. Verifica el despliegue.' };
+    }
+  } catch (err) {
+    return { ok: false, error: 'Conexión fallida: ' + err.message };
+  }
+}
+
+function escapeHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+}
+function fill(id, arr) {
+  $(id).innerHTML = '<option value="">— elegir —</option>' + arr.map(x => '<option>' + escapeHtml(x) + '</option>').join('');
+}
+
+// ============================================================
+// GOOGLE SIGN-IN
+// ============================================================
+window.handleGoogleSignIn = async function (response) {
+  googleToken = response.credential;
+  const payload = decodeJWT(googleToken);
+  if (!payload || !payload.email) { $('login-error').textContent = 'Error procesando tu sesión Google'; return; }
+  userEmail = payload.email;
+  $('login-error').textContent = 'Verificando autorización…';
+  const res = await callAPI('catalogos');
+  if (!res.ok) {
+    $('login-error').textContent = res.error || 'Error de conexión';
+    googleToken = '';
+    return;
+  }
+  catalogos = res.data;
+  localStorage.setItem('vc_token', googleToken);
+  initApp();
+};
+
+function initGoogleSignIn() {
+  if (!window.google || !google.accounts || !google.accounts.id) { setTimeout(initGoogleSignIn, 200); return; }
+  google.accounts.id.initialize({
+    client_id: CLIENT_ID,
+    callback: window.handleGoogleSignIn,
+    auto_select: false,
+    cancel_on_tap_outside: false,
+    use_fedcm_for_prompt: true,
+    use_fedcm_for_button: true,
+    itp_support: true
+  });
+  google.accounts.id.renderButton($('google-signin-btn'), { theme: 'outline', size: 'large', text: 'signin_with', shape: 'pill', locale: 'es' });
+}
+
+function logout() {
+  if (window.google && google.accounts && google.accounts.id) google.accounts.id.disableAutoSelect();
+  googleToken = '';
+  localStorage.removeItem('vc_token');
+  location.reload();
+}
+$('btn-salir').addEventListener('click', logout);
+
+// ============================================================
+// INIT
+// ============================================================
+function initApp() {
+  hide('login-screen');
+  show('app-wrapper');
+  $('topbar-email').textContent = catalogos.usuario ? catalogos.usuario.email : userEmail;
+  fill('linea', catalogos.lineas);
+  fill('metodo', catalogos.metodos);
+  fill('terminal', catalogos.terminales);
+  fill('moneda', catalogos.monedas);
+  fill('medico', catalogos.medicos);
+  fill('operativo', catalogos.medicos);
+  fill('prospecta', catalogos.asesores.concat(['No Aplica']));
+  fill('cierra', catalogos.asesores.concat(['No Aplica']));
+  fill('condicion', catalogos.condiciones);
+  $('factura').addEventListener('change', function() {
+    if (this.value === 'Sí') show('boxNumFactura'); else hide('boxNumFactura');
+  });
+  $('buscaPac').addEventListener('input', onBuscar);
+  $('moneda').addEventListener('change', onMoneda);
+  ['monto', 'tc'].forEach(id => $(id).addEventListener('input', previewMXN));
+
+  // Solo admin/facturación ve el botón de facturas pendientes
+  const rol = catalogos.usuario && catalogos.usuario.rol ? catalogos.usuario.rol : 'cobros';
+  if (rol === 'admin' || rol === 'facturacion' || rol === 'facturación') {
+    show('btn-facturas');
+  }
+}
+
+async function bootstrap() {
+  if (googleToken) {
+    const payload = decodeJWT(googleToken);
+    if (payload && payload.email && payload.exp * 1000 > Date.now()) {
+      userEmail = payload.email;
+      const res = await callAPI('catalogos');
+      if (res.ok) { catalogos = res.data; initApp(); return; }
+    }
+    googleToken = '';
+    localStorage.removeItem('vc_token');
+  }
+  initGoogleSignIn();
+}
+bootstrap();
+
+// ============================================================
+// BÚSQUEDA DE PACIENTE
+// ============================================================
+function onBuscar(e) {
+  const txt = e.target.value.trim();
+  hide('pacNoExiste');
+  if (BUSCANDO) clearTimeout(BUSCANDO);
+  if (txt.length < 2) { hide('resultados'); return; }
+  BUSCANDO = setTimeout(async () => {
+    const r = await callAPI('buscar', { query: txt });
+    pintarResultados(r);
+  }, 300);
+}
+
+function pintarResultados(r) {
+  const cont = $('resultados');
+  if (!r.ok) { hide('resultados'); return; }
+  if (!r.data.length) { hide('resultados'); show('pacNoExiste'); return; }
+  cont.innerHTML = r.data.map(p =>
+    '<div onclick=\'elegirPaciente(' + JSON.stringify(p).replace(/'/g, "&#39;") + ')\'>' +
+      '<div>' + escapeHtml(p.nombre) + (p.apodo ? ' <span class="muted small">(' + escapeHtml(p.apodo) + ')</span>' : '') + '</div>' +
+      '<div class="rid">ID ' + escapeHtml(p.id) + (p.estatus ? ' · ' + escapeHtml(p.estatus) : '') + '</div>' +
+    '</div>').join('');
+  show('resultados');
+}
+
+function elegirPaciente(p) {
+  PAC = p;
+  hide('resultados');
+  $('buscaPac').value = '';
+  $('pacNombre').textContent = p.nombre;
+  $('pacMeta').textContent = 'ID ' + p.id + (p.apodo ? ' · Le gusta: ' + p.apodo : '') + (p.estatus ? ' · ' + p.estatus : '') + (p.procedencia ? ' · ' + p.procedencia : '');
+  show('pacSel');
+  hide('pacNoExiste');
+}
+function limpiarPaciente() {
+  PAC = null;
+  hide('pacSel');
+  $('buscaPac').value = '';
+  $('buscaPac').focus();
+}
+
+// ============================================================
+// MONEDA / DÓLARES
+// ============================================================
+function onMoneda() {
+  const usd = $('moneda').value === 'USD';
+  $('boxTC').classList.toggle('hidden', !usd);
+  $('lblMonto').textContent = usd ? 'Monto (USD)' : 'Monto';
+  previewMXN();
+}
+function previewMXN() {
+  const usd = $('moneda').value === 'USD';
+  const m = parseFloat($('monto').value);
+  const tc = parseFloat($('tc').value);
+  const box = $('previewMXN');
+  if (usd && m > 0 && tc > 0) {
+    box.textContent = 'Equivale a $' + (m * tc).toLocaleString('es-MX', { minimumFractionDigits: 2 }) + ' MXN';
+    box.classList.remove('hidden');
+  } else { box.classList.add('hidden'); }
+}
+
+// ============================================================
+// ENVIAR COBRO
+// ============================================================
+async function enviarCobro() {
+  if (ENVIANDO) return;
+  hide('msg');
+  if (!PAC) return showMsg('Selecciona un paciente de la base.');
+  const linea = $('linea').value, metodo = $('metodo').value, terminal = $('terminal').value, moneda = $('moneda').value;
+  const monto = parseFloat($('monto').value);
+  const tc = parseFloat($('tc').value);
+  if (!linea) return showMsg('Elige la línea de negocio.');
+  if (!metodo) return showMsg('Elige el método de pago.');
+  if (!terminal) return showMsg('Elige la terminal o cuenta.');
+  if (!moneda) return showMsg('Elige la moneda.');
+  if (!(monto > 0)) return showMsg('Captura un monto mayor a cero.');
+  if (moneda === 'USD' && !(tc > 0)) return showMsg('Pago en dólares: captura el tipo de cambio.');
+  const medico = $('medico').value, condicion = $('condicion').value;
+  if (!medico) return showMsg('Elige el médico titular.');
+  if (!condicion) return showMsg('Elige la condición de pago.');
+
+  const cobro = {
+    idPaciente: PAC.id, nombrePaciente: PAC.nombre,
+    estatusPaciente: PAC.estatus || '', procedencia: PAC.procedencia || '',
+    linea, tratamiento: $('tratamiento').value.trim(),
+    area: $('area').value.trim(),
+    medico, operativo: $('operativo').value,
+    prospecta: $('prospecta').value, cierra: $('cierra').value,
+    condicion,
+    metodo, terminal, moneda, montoOriginal: monto,
+    tipoCambio: moneda === 'USD' ? tc : '',
+    factura: $('factura').value,
+    numFactura: $('factura').value === 'Sí' ? $('numFactura').value.trim() : '',
+    observaciones: $('obs').value.trim()
+  };
+
+  ENVIANDO = true;
+  const b = $('btnCobrar');
+  b.disabled = true; b.textContent = 'Registrando…';
+  const r = await callAPI('cobro', { cobro });
+  ENVIANDO = false;
+  b.disabled = false; b.textContent = 'Registrar cobro';
+  if (!r.ok) return showMsg(r.error || 'No se pudo registrar.');
+  pintarRecibo(r.recibo);
+  hide('view-cobro');
+  show('view-recibo');
+  window.scrollTo(0, 0);
+}
+
+// ============================================================
+// RECIBO
+// ============================================================
+function pintarRecibo(d) {
+  const money = n => '$' + Number(n).toLocaleString('es-MX', { minimumFractionDigits: 2 });
+  let filas =
+    row('Folio', d.folio) + row('Fecha', d.fecha) +
+    row('Paciente', d.paciente) +
+    row('Concepto', (d.linea || '') + (d.tratamiento ? ' · ' + d.tratamiento : '')) +
+    (d.medico ? row('Médico', d.medico) : '') +
+    (d.condicion ? row('Condición', d.condicion) : '') +
+    row('Método de pago', d.metodo);
+  if (d.moneda === 'USD') {
+    filas += row('Monto (USD)', money(d.montoOriginal)) + row('Tipo de cambio', d.tipoCambio);
+  }
+  filas += '<tr><td class="k total">Total cobrado</td><td class="total">' + money(d.montoMXN) + ' MXN</td></tr>';
+  $('reciboArea').innerHTML =
+    '<div class="recibo">' +
+      '<div class="rb-h">' +
+        '<div><div class="brand">DR. MIGUEL SOTO</div><div class="sub">Cirujano Plástico Certificado</div></div>' +
+        '<div><div class="doc-tag">Recibo de cobro</div><div class="folio">' + escapeHtml(d.folio) + '</div></div>' +
+      '</div>' +
+      '<table>' + filas + '</table>' +
+      '<div class="pie">Atendió: ' + escapeHtml(d.capturo) + ' · Conserve este recibo como comprobante de su pago.</div>' +
+    '</div>';
+}
+function row(k, v) { return '<tr><td class="k">' + k + '</td><td>' + escapeHtml(String(v == null ? '' : v)) + '</td></tr>'; }
+
+function imprimir() { window.print(); }
+function nuevoCobro() {
+  PAC = null;
+  ['tratamiento', 'monto', 'tc', 'obs', 'buscaPac', 'area', 'numFactura'].forEach(id => $(id).value = '');
+  ['linea', 'metodo', 'terminal', 'moneda', 'medico', 'operativo', 'prospecta', 'cierra', 'condicion', 'factura'].forEach(id => $(id).selectedIndex = 0);
+  hide('pacSel'); hide('boxTC'); hide('previewMXN'); hide('msg'); hide('boxNumFactura');
+  hide('view-recibo'); show('view-cobro');
+  window.scrollTo(0, 0);
+}
+
+// ============================================================
+// FACTURAS PENDIENTES (solo admin)
+// ============================================================
+async function abrirFacturas() {
+  hide('view-cobro'); hide('view-recibo'); show('view-facturas');
+  show('btn-volver-cobro'); hide('btn-facturas');
+  window.scrollTo(0, 0);
+  $('facturasLista').innerHTML = '<div class="muted small">Cargando…</div>';
+  const r = await callAPI('facturasPendientes');
+  if (!r.ok) { $('facturasLista').innerHTML = '<div class="alert alert-error">' + escapeHtml(r.error || 'Error') + '</div>'; return; }
+  if (!r.data.length) { $('facturasLista').innerHTML = '<div class="muted">No hay cobros pendientes de facturar. 🎉</div>'; return; }
+  const money = n => '$' + Number(n).toLocaleString('es-MX', { minimumFractionDigits: 2 });
+  $('facturasLista').innerHTML = r.data.map(f => {
+    const dias = (typeof f.diasDesdeCobro === 'number') ? f.diasDesdeCobro : null;
+    let badge = '';
+    if (dias !== null) {
+      const color = dias <= 1 ? '#2e7d32' : (dias <= 3 ? '#b8860b' : '#c0392b');
+      const txt = dias === 0 ? 'hoy' : (dias === 1 ? '1 día' : dias + ' días');
+      badge = '<span style="color:' + color + ';font-weight:600;">⏱ ' + txt + '</span>';
+    }
+    return '<div class="fac-item" id="fac-' + escapeHtml(f.folio) + '">' +
+      '<div class="fac-head">' +
+        '<div><b>' + escapeHtml(f.folio) + '</b> · ' + escapeHtml(f.paciente) + '</div>' +
+        '<div class="muted small">' + escapeHtml(f.fecha) + ' · ' + money(f.montoMXN) + ' MXN' + (badge ? ' · ' + badge : '') + '</div>' +
+      '</div>' +
+      '<div class="grid2" style="margin-top:10px;">' +
+        '<div class="form-group"><label class="lbl">No. de factura</label><input type="text" id="nf-' + escapeHtml(f.folio) + '" placeholder="Folio fiscal"></div>' +
+      '</div>' +
+      '<button class="btn btn-primary" style="margin-top:0;" onclick="guardarFactura(\'' + escapeHtml(f.folio) + '\', this)">Registrar factura</button>' +
+      '<div class="alert alert-error hidden" id="fmsg-' + escapeHtml(f.folio) + '"></div>' +
+    '</div>';
+  }).join('');
+}
+
+function volverACobro() {
+  hide('view-facturas'); hide('view-recibo'); show('view-cobro');
+  hide('btn-volver-cobro'); show('btn-facturas');
+  window.scrollTo(0, 0);
+}
+
+async function guardarFactura(folio, btn) {
+  const num = $('nf-' + folio).value.trim();
+  const fmsg = $('fmsg-' + folio);
+  fmsg.classList.add('hidden');
+  if (!num) { fmsg.textContent = 'Captura el número de factura.'; fmsg.classList.remove('hidden'); return; }
+
+  btn.disabled = true; btn.textContent = 'Registrando…';
+  const r = await callAPI('registrarFactura', { factura: { folio, numFactura: num } });
+  if (!r.ok) {
+    fmsg.textContent = r.error || 'No se pudo registrar.'; fmsg.classList.remove('hidden');
+    btn.disabled = false; btn.textContent = 'Registrar factura';
+    return;
+  }
+  // Quitar la tarjeta de la lista (ya facturado)
+  const item = $('fac-' + folio);
+  if (item) {
+    item.innerHTML = '<div class="fac-head"><div><b>' + escapeHtml(folio) + '</b> · facturado ✓</div>' +
+      '<div class="muted small">Factura ' + escapeHtml(num) + ' · ' + escapeHtml(r.fechaFactura || '') + '</div></div>';
+    item.style.opacity = '0.6';
+  }
+}
+
+
+</script>
+</body>
+</html>
