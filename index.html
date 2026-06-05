@@ -1007,8 +1007,8 @@ function agregarTratamiento() {
       const terminalTmp = usaPropioTmp ? $('terminalTrat').value : $('terminal').value;
       const ELECTRONICAS_DR = ['Multiva MS','Multiva Amex','Mercado Pago','HSBC','Multiva','Santander','PayPal','Zelle'];
       const quiereSplit = $('liquidarSplit').checked;
-      // Liquidación del saldo con split: solo si se marca y la terminal es electrónica del Dr
-      if (quiereSplit && ELECTRONICAS_DR.indexOf(terminalTmp) >= 0) {
+      // Liquidación del saldo con split: abre el modal SIEMPRE (ahí se eligen ambas terminales)
+      if (quiereSplit) {
         return mostrarModalSplitCirugia(terminalTmp);
       }
       // Abono / pago a una sola terminal: un cobro con el monto capturado (el backend lo aplica y reconcilia al final)
@@ -1416,7 +1416,7 @@ async function enviarEstadoCorreo(btn) {
 
 let _splitCirugiaPending = null;
 
-function mostrarModalSplitCirugia(terminalDr) {
+function mostrarModalSplitCirugia(terminalDrSugerida) {
   if (!COT_ELEGIDA) {
     return showMsg('Selecciona la cotización aceptada antes de cobrar la cirugía.');
   }
@@ -1428,12 +1428,17 @@ function mostrarModalSplitCirugia(terminalDr) {
   $('splitTrat').textContent = label + ' (' + COT_ELEGIDA.cotizacionId + ')';
   $('splitHon').textContent = '$' + Number(honorarios).toLocaleString('es-MX', { minimumFractionDigits: 2 });
   $('splitBck').textContent = '$' + Number(bucketClinica).toLocaleString('es-MX', { minimumFractionDigits: 2 });
-  $('splitTermDr').textContent = terminalDr;
+  // Terminal del Dr (honorarios): dropdown de terminales electrónicas del Dr
+  const terminalesDr = ['Multiva MS', 'Multiva Amex', 'Mercado Pago', 'HSBC', 'Multiva', 'Santander', 'PayPal', 'Zelle'];
+  const selDr = $('splitTermDr');
+  selDr.innerHTML = terminalesDr.map(function(t){ return '<option value="'+t+'">'+t+'</option>'; }).join('');
+  if (terminalDrSugerida && terminalesDr.indexOf(terminalDrSugerida) >= 0) selDr.value = terminalDrSugerida;
+  // Terminal Renasté (bucket): dropdown de terminales Renasté
   const terminalesRen = ['Multiva Renasté', 'Cuenta Renasté'];
-  const sel = $('splitTermRen');
-  sel.innerHTML = terminalesRen.map(function(t){ return '<option value="'+t+'">'+t+'</option>'; }).join('');
-  sel.value = 'Multiva Renasté';
-  _splitCirugiaPending = { terminalDr: terminalDr, honorarios: honorarios, bucketClinica: bucketClinica, cotizacionId: COT_ELEGIDA.cotizacionId, label: label, granTotal: COT_ELEGIDA.granTotal };
+  const selRen = $('splitTermRen');
+  selRen.innerHTML = terminalesRen.map(function(t){ return '<option value="'+t+'">'+t+'</option>'; }).join('');
+  selRen.value = 'Multiva Renasté';
+  _splitCirugiaPending = { honorarios: honorarios, bucketClinica: bucketClinica, cotizacionId: COT_ELEGIDA.cotizacionId, label: label, granTotal: COT_ELEGIDA.granTotal };
   show('modalSplitCirugia');
 }
 
@@ -1444,8 +1449,10 @@ function cancelarSplitCirugia() {
 
 function confirmarSplitCirugia() {
   if (!_splitCirugiaPending) return;
+  const terminalDr = $('splitTermDr').value;
   const terminalRen = $('splitTermRen').value;
-  if (!terminalRen) return showMsg('Selecciona la terminal Renasté.');
+  if (!terminalDr) return showMsg('Selecciona la terminal del Dr (para honorarios).');
+  if (!terminalRen) return showMsg('Selecciona la terminal Renasté (para el bucket).');
 
   const linea = 'Cirugía';
   const tratamiento = _splitCirugiaPending.label;
@@ -1457,31 +1464,36 @@ function confirmarSplitCirugia() {
   const tc = moneda === 'USD' ? parseFloat($('tc').value) : '';
   const autoriza = $('autorizaDesc').value.trim();
 
-  CARRITO.push({
-    linea: linea, tratamiento: tratamiento, area: '',
-    condicion: condicion, esCortesia: false,
-    precioLista: _splitCirugiaPending.granTotal,
-    descuentoPct: '', descuentoMonto: '',
-    autorizaDesc: autoriza || '',
-    obsDescuento: 'Honorarios (split Cirugía · ' + cotId + ')',
-    monto: _splitCirugiaPending.honorarios,
-    metodo: metodo, terminal: _splitCirugiaPending.terminalDr,
-    moneda: moneda, tipoCambio: tc,
-    cotizacionId: cotId
-  });
+  // Solo se agregan los renglones con saldo > 0 (si honorarios ya está cubierto, solo va el bucket, y viceversa)
+  if (Number(_splitCirugiaPending.honorarios) > 0) {
+    CARRITO.push({
+      linea: linea, tratamiento: tratamiento, area: '',
+      condicion: condicion, esCortesia: false,
+      precioLista: _splitCirugiaPending.granTotal,
+      descuentoPct: '', descuentoMonto: '',
+      autorizaDesc: autoriza || '',
+      obsDescuento: 'Honorarios (split Cirugía · ' + cotId + ')',
+      monto: _splitCirugiaPending.honorarios,
+      metodo: metodo, terminal: terminalDr,
+      moneda: moneda, tipoCambio: tc,
+      cotizacionId: cotId
+    });
+  }
 
-  CARRITO.push({
-    linea: linea, tratamiento: tratamiento, area: '',
-    condicion: condicion, esCortesia: false,
-    precioLista: _splitCirugiaPending.granTotal,
-    descuentoPct: '', descuentoMonto: '',
-    autorizaDesc: autoriza || '',
-    obsDescuento: 'Bucket clínica (split Cirugía · ' + cotId + ')',
-    monto: _splitCirugiaPending.bucketClinica,
-    metodo: metodo, terminal: terminalRen,
-    moneda: moneda, tipoCambio: tc,
-    cotizacionId: cotId
-  });
+  if (Number(_splitCirugiaPending.bucketClinica) > 0) {
+    CARRITO.push({
+      linea: linea, tratamiento: tratamiento, area: '',
+      condicion: condicion, esCortesia: false,
+      precioLista: _splitCirugiaPending.granTotal,
+      descuentoPct: '', descuentoMonto: '',
+      autorizaDesc: autoriza || '',
+      obsDescuento: 'Bucket clínica (split Cirugía · ' + cotId + ')',
+      monto: _splitCirugiaPending.bucketClinica,
+      metodo: metodo, terminal: terminalRen,
+      moneda: moneda, tipoCambio: tc,
+      cotizacionId: cotId
+    });
+  }
 
   renderCarrito();
   limpiarTratamiento();
@@ -1498,7 +1510,7 @@ function confirmarSplitCirugia() {
     <div class="split-row">
       <span class="lbl-r">Honorarios Dr.</span>
       <span class="amt" id="splitHon">$0</span>
-      <span class="muted small">→ <b id="splitTermDr">—</b></span>
+      <select id="splitTermDr"></select>
     </div>
     <div class="split-row">
       <span class="lbl-r">Bucket Clínica</span>
