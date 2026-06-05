@@ -281,7 +281,7 @@
         <div class="section-label serif">Agregar tratamiento</div>
         <div class="grid2">
           <div class="form-group"><label class="lbl">Línea de negocio</label><select id="linea"></select></div>
-          <div class="form-group" style="position:relative;">
+          <div class="form-group" id="grupoTratamiento" style="position:relative;">
             <label class="lbl">Tratamiento / concepto</label>
             <input type="text" id="tratamiento" placeholder="Escribe 2-3 letras…" autocomplete="off">
             <div id="tratResultados" class="trat-resultados hidden"></div>
@@ -530,8 +530,10 @@ function initApp() {
     hide('tratResultados');
     if (this.value === 'Cirugía') {
       // Cirugía: se cobra contra una cotización aceptada, no por búsqueda de tratamiento
+      hide('grupoTratamiento');
       cargarCotizaciones();
     } else {
+      show('grupoTratamiento');
       hide('cotizacionBox');
       hide('cotizacionSaldo');
       hide('cotizacionAcciones');
@@ -865,6 +867,7 @@ function nuevoCobro() {
   limpiarErrores();
   hide('pacSel'); hide('boxTC'); hide('previewMXN'); hide('msg'); hide('boxNumFactura'); hide('boxPagoTrat'); hide('histBox'); hide('boxAutoriza');
   hide('cotizacionBox'); hide('cotizacionSaldo'); hide('cotizacionAcciones');
+  show('grupoTratamiento');
   $('liquidarSplit').checked = false;
   $('cotizacionInfo').textContent = ''; $('cotizacionSel').innerHTML = '';
   hide('view-estado'); hide('view-recibo'); show('view-cobro');
@@ -1171,6 +1174,7 @@ function limpiarTratamiento() {
   hide('cotizacionBox');
   hide('cotizacionSaldo');
   hide('cotizacionAcciones');
+  show('grupoTratamiento');
   $('liquidarSplit').checked = false;
   $('cotizacionInfo').textContent = '';
   $('cotizacionSel').innerHTML = '';
