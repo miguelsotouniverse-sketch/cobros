@@ -1428,16 +1428,22 @@ function mostrarModalSplitCirugia(terminalDrSugerida) {
   $('splitTrat').textContent = label + ' (' + COT_ELEGIDA.cotizacionId + ')';
   $('splitHon').textContent = '$' + Number(honorarios).toLocaleString('es-MX', { minimumFractionDigits: 2 });
   $('splitBck').textContent = '$' + Number(bucketClinica).toLocaleString('es-MX', { minimumFractionDigits: 2 });
-  // Terminal del Dr (honorarios): electrónicas del Dr + Efectivo Dr. (efectivo libera IVA al Dr)
+  // ¿El método de pago general es Efectivo? Si sí, el split usa terminales de efectivo
+  // por defecto (así el IVA se libera al Dr automáticamente). Igual se puede cambiar.
+  const usaPropioSplit = $('pagoDistinto').checked;
+  const metodoSplit = usaPropioSplit ? $('metodoTrat').value : $('metodo').value;
+  const esEfectivoSplit = (metodoSplit === 'Efectivo');
+  // Terminal del Dr (honorarios): electrónicas del Dr + Efectivo Dr.
   const terminalesDr = ['Multiva MS', 'Multiva Amex', 'Mercado Pago', 'HSBC', 'Multiva', 'Santander', 'PayPal', 'Zelle', 'Efectivo Dr.'];
   const selDr = $('splitTermDr');
   selDr.innerHTML = terminalesDr.map(function(t){ return '<option value="'+t+'">'+t+'</option>'; }).join('');
-  if (terminalDrSugerida && terminalesDr.indexOf(terminalDrSugerida) >= 0) selDr.value = terminalDrSugerida;
+  selDr.value = esEfectivoSplit ? 'Efectivo Dr.'
+    : ((terminalDrSugerida && terminalesDr.indexOf(terminalDrSugerida) >= 0) ? terminalDrSugerida : 'Multiva MS');
   // Terminal Renasté (bucket): electrónicas Renasté + Efectivo Renasté
   const terminalesRen = ['Multiva Renasté', 'Cuenta Renasté', 'Efectivo Renasté'];
   const selRen = $('splitTermRen');
   selRen.innerHTML = terminalesRen.map(function(t){ return '<option value="'+t+'">'+t+'</option>'; }).join('');
-  selRen.value = 'Multiva Renasté';
+  selRen.value = esEfectivoSplit ? 'Efectivo Renasté' : 'Multiva Renasté';
   _splitCirugiaPending = { honorarios: honorarios, bucketClinica: bucketClinica, cotizacionId: COT_ELEGIDA.cotizacionId, label: label, granTotal: COT_ELEGIDA.granTotal };
   show('modalSplitCirugia');
 }
