@@ -908,7 +908,7 @@ function agregarTratamiento() {
     const condicionTmp = $('condicion').value;
     const esCortesiaTmp = (condicionTmp === 'Cortesía');
     const facturaTmp = $('factura').value;
-    if (!esCortesiaTmp && facturaTmp === 'Sí') {
+    if (!esCortesiaTmp) {
       const usaPropioTmp = $('pagoDistinto').checked;
       const terminalTmp = usaPropioTmp ? $('terminalTrat').value : $('terminal').value;
       const ELECTRONICAS_DR = ['Multiva MS','Multiva Amex','Mercado Pago','HSBC','Multiva','Santander','PayPal','Zelle'];
@@ -1172,10 +1172,18 @@ function mostrarModalSplitCirugia(terminalDr) {
   $('splitHon').textContent = '$' + Number(honorarios).toLocaleString('es-MX', { minimumFractionDigits: 2 });
   $('splitBck').textContent = '$' + Number(bucketClinica).toLocaleString('es-MX', { minimumFractionDigits: 2 });
   $('splitTermDr').textContent = terminalDr;
-  const terminalesRen = ['Multiva Renasté', 'Cuenta Renasté'];
+  const factura = $('factura').value;
+  let terminales, defaultTerm;
+  if (factura === 'Sí') {
+    terminales = ['Multiva Renasté', 'Cuenta Renasté'];
+    defaultTerm = 'Multiva Renasté';
+  } else {
+    terminales = ['Multiva MS','Multiva Amex','Mercado Pago','HSBC','Multiva','Santander','PayPal','Zelle','Multiva Renasté','Cuenta Renasté'];
+    defaultTerm = terminalDr;
+  }
   const sel = $('splitTermRen');
-  sel.innerHTML = terminalesRen.map(function(t){ return '<option value="'+t+'">'+t+'</option>'; }).join('');
-  sel.value = 'Multiva Renasté';
+  sel.innerHTML = terminales.map(function(t){ return '<option value="'+t+'">'+t+'</option>'; }).join('');
+  sel.value = defaultTerm;
   _splitCirugiaPending = { terminalDr: terminalDr, honorarios: honorarios, bucketClinica: bucketClinica };
   show('modalSplitCirugia');
 }
