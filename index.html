@@ -903,21 +903,19 @@ function agregarTratamiento() {
   const tratamiento = $('tratamiento').value.trim();
   const monto = parseFloat($('monto').value);
 
-  // === Interceptación Cirugía: pedir split si terminal es electrónica del Dr ===
+  // === Interceptación Cirugía: split obligatorio SOLO si lleva factura ===
   if (linea === 'Cirugía' && TRAT_ELEGIDO && TRAT_ELEGIDO.desglose) {
-  const condicionTmp = $('condicion').value;
-  const esCortesiaTmp = (condicionTmp === 'Cortesía');
-  // === NUEVO: solo split obligatorio si lleva factura ===
-  const facturaTmp = $('factura').value;
-  if (!esCortesiaTmp && facturaTmp === 'Sí') {
-    const usaPropioTmp = $('pagoDistinto').checked;
-    const terminalTmp = usaPropioTmp ? $('terminalTrat').value : $('terminal').value;
-    const ELECTRONICAS_DR = ['Multiva MS','Multiva Amex','Mercado Pago','HSBC','Multiva','Santander','PayPal','Zelle'];
-    if (ELECTRONICAS_DR.indexOf(terminalTmp) >= 0) {
-      return mostrarModalSplitCirugia(terminalTmp);
+    const condicionTmp = $('condicion').value;
+    const esCortesiaTmp = (condicionTmp === 'Cortesía');
+    const facturaTmp = $('factura').value;
+    if (!esCortesiaTmp && facturaTmp === 'Sí') {
+      const usaPropioTmp = $('pagoDistinto').checked;
+      const terminalTmp = usaPropioTmp ? $('terminalTrat').value : $('terminal').value;
+      const ELECTRONICAS_DR = ['Multiva MS','Multiva Amex','Mercado Pago','HSBC','Multiva','Santander','PayPal','Zelle'];
+      if (ELECTRONICAS_DR.indexOf(terminalTmp) >= 0) {
+        return mostrarModalSplitCirugia(terminalTmp);
+      }
     }
-  }
-}
   }
 
   const condicion = $('condicion').value;
@@ -926,13 +924,10 @@ function agregarTratamiento() {
   const faltan = [];
   if (!linea) { marcarError('linea'); faltan.push('línea de negocio'); }
   if (!tratamiento) { marcarError('tratamiento'); faltan.push('tratamiento'); }
-  // Tratamiento estricto: debe haberse elegido de la lista
   if (tratamiento && !TRAT_ELEGIDO) { marcarError('tratamiento'); faltan.push('elegir el tratamiento de la lista'); }
   if (!condicion) { marcarError('condicion'); faltan.push('condición de pago'); }
-  // En cortesía el monto es 0 (válido); en lo demás debe ser > 0
   if (!esCortesia && !(monto > 0)) { marcarError('monto'); faltan.push('monto'); }
 
-  // Descuento o cortesía: exige quién autoriza
   const descPct = parseFloat($('descuento').value) || 0;
   const descMonto = parseFloat($('descuentoMonto').value) || 0;
   const autoriza = $('autorizaDesc').value.trim();
@@ -941,7 +936,6 @@ function agregarTratamiento() {
     faltan.push(esCortesia ? 'quién autoriza la cortesía' : 'quién autoriza el descuento');
   }
 
-  // Método de pago: general o propio del tratamiento
   let metodo, terminal, moneda;
   if ($('pagoDistinto').checked && !esCortesia) {
     metodo = $('metodoTrat').value; terminal = $('terminalTrat').value; moneda = $('monedaTrat').value;
@@ -972,6 +966,24 @@ function agregarTratamiento() {
     obsDescuento = descTxt ? ('Descuento ' + descTxt + ' autorizado por ' + autoriza) : '';
   }
 
+  CARRITO.push({
+    linea: linea,
+    tratamiento: tratamiento,
+    area: '',
+    condicion: condicion,
+    esCortesia: esCortesia,
+    precioLista: valorLista || '',
+    descuentoPct: esCortesia ? 100 : ($('descuento').value !== '' ? parseFloat($('descuento').value) : ''),
+    descuentoMonto: descMonto || '',
+    autorizaDesc: autoriza,
+    obsDescuento: obsDescuento,
+    monto: esCortesia ? 0 : monto,
+    metodo: metodo, terminal: terminal, moneda: moneda,
+    tipoCambio: tc
+  });
+  renderCarrito();
+  limpiarTratamiento();
+}
   CARRITO.push({
     linea: linea,
     tratamiento: tratamiento,
