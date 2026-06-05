@@ -1341,7 +1341,7 @@ async function abrirEstadoCuenta() {
   show('view-estado');
   window.scrollTo(0, 0);
   $('estadoArea').innerHTML = '<div class="muted small">Cargando estado de cuenta…</div>';
-  const r = await callAPI('estadoCuenta', { cotizacionId: COT_ELEGIDA.cotizacionId });
+  const r = await callAPI('estadoCuenta', { cotizacionId: COT_ELEGIDA.cotizacionId, idPaciente: (PAC ? PAC.id : '') });
   if (!r.ok) { $('estadoArea').innerHTML = '<div class="alert alert-error">' + escapeHtml(r.error || 'Error') + '</div>'; return; }
   pintarEstadoCuenta(r.data);
 }
@@ -1397,7 +1397,7 @@ async function enviarEstadoCorreo(btn) {
   msg.style.color = '';
   msg.textContent = 'Enviando estado de cuenta por correo…';
   if (btn) btn.disabled = true;
-  const r = await callAPI('enviarEstadoCorreo', { cotizacionId: d.cotizacionId });
+  const r = await callAPI('enviarEstadoCorreo', { cotizacionId: d.cotizacionId, idPaciente: (d.pacienteId || (PAC ? PAC.id : '')) });
   if (btn) btn.disabled = false;
   if (!r.ok) {
     msg.style.color = 'var(--error)';
