@@ -291,6 +291,14 @@
           <label class="lbl">Cotización aceptada (obligatoria para cirugía)</label>
           <select id="cotizacionSel"></select>
           <div id="cotizacionInfo" class="muted small" style="margin-top:6px;"></div>
+          <div id="cotizacionSaldo" class="hidden" style="margin-top:8px;background:var(--bg-soft);border:1px solid var(--border-soft);border-radius:4px;padding:10px 14px;"></div>
+          <div id="cotizacionAcciones" class="hidden" style="margin-top:8px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
+            <label style="margin:0;font-size:0.85rem;cursor:pointer;">
+              <input type="checkbox" id="liquidarSplit" style="width:auto;margin-right:6px;vertical-align:middle;">
+              Liquidar el saldo con split (honorarios→Dr / bucket→Renasté)
+            </label>
+            <button type="button" class="link" onclick="abrirEstadoCuenta()">Ver estado de cuenta</button>
+          </div>
         </div>
         <div class="grid2">
           <div class="form-group"><label class="lbl">Precio de lista</label><input type="number" id="precioLista" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></div>
@@ -356,6 +364,19 @@
       <div class="view-subtitle">Cobros marcados con factura que aún no tienen número</div>
       <div class="card">
         <div id="facturasLista"></div>
+      </div>
+    </section>
+
+    <!-- ESTADO DE CUENTA -->
+    <section id="view-estado" class="hidden">
+      <h1 class="view-title serif noprint">Estado de cuenta</h1>
+      <div class="view-subtitle noprint">Resumen de pagos de la paciente</div>
+      <div class="card">
+        <div id="estadoArea"></div>
+        <div class="acciones noprint">
+          <button class="btn btn-secondary" onclick="imprimirEstado()">🖨 Imprimir / Guardar PDF</button>
+          <button class="btn btn-primary" style="width:auto;margin-top:0;" onclick="volverDeEstado()">← Volver al cobro</button>
+        </div>
       </div>
     </section>
   </main>
@@ -509,6 +530,8 @@ function initApp() {
       cargarCotizaciones();
     } else {
       hide('cotizacionBox');
+      hide('cotizacionSaldo');
+      hide('cotizacionAcciones');
       $('cotizacionInfo').textContent = '';
     }
   });
@@ -803,8 +826,10 @@ function nuevoCobro() {
   $('pagoDistinto').checked = false;
   limpiarErrores();
   hide('pacSel'); hide('boxTC'); hide('previewMXN'); hide('msg'); hide('boxNumFactura'); hide('boxPagoTrat'); hide('histBox'); hide('boxAutoriza');
-  hide('cotizacionBox'); $('cotizacionInfo').textContent = ''; $('cotizacionSel').innerHTML = '';
-  hide('view-recibo'); show('view-cobro');
+  hide('cotizacionBox'); hide('cotizacionSaldo'); hide('cotizacionAcciones');
+  $('liquidarSplit').checked = false;
+  $('cotizacionInfo').textContent = ''; $('cotizacionSel').innerHTML = '';
+  hide('view-estado'); hide('view-recibo'); show('view-cobro');
   window.scrollTo(0, 0);
 }
 
@@ -940,10 +965,12 @@ function agregarTratamiento() {
       const usaPropioTmp = $('pagoDistinto').checked;
       const terminalTmp = usaPropioTmp ? $('terminalTrat').value : $('terminal').value;
       const ELECTRONICAS_DR = ['Multiva MS','Multiva Amex','Mercado Pago','HSBC','Multiva','Santander','PayPal','Zelle'];
-      if (ELECTRONICAS_DR.indexOf(terminalTmp) >= 0) {
+      const quiereSplit = $('liquidarSplit').checked;
+      // Liquidación del saldo con split: solo si se marca y la terminal es electrónica del Dr
+      if (quiereSplit && ELECTRONICAS_DR.indexOf(terminalTmp) >= 0) {
         return mostrarModalSplitCirugia(terminalTmp);
       }
-      // Efectivo (No aplica) / Efectivo Dr/Renasté / terminal Renasté: un solo cobro del paquete (el backend auto-divide)
+      // Abono / pago a una sola terminal: un cobro con el monto capturado (el backend lo aplica y reconcilia al final)
     }
   }
 
@@ -1104,6 +1131,9 @@ function limpiarTratamiento() {
   hide('boxAutoriza');
   hide('previewMXN');
   hide('cotizacionBox');
+  hide('cotizacionSaldo');
+  hide('cotizacionAcciones');
+  $('liquidarSplit').checked = false;
   $('cotizacionInfo').textContent = '';
   $('cotizacionSel').innerHTML = '';
   $('linea').focus();
@@ -1235,6 +1265,7 @@ function onElegirCotizacion() {
   if (!c) {
     COT_ELEGIDA = null; TRAT_ELEGIDO = null;
     info.textContent = '';
+    hide('cotizacionSaldo'); hide('cotizacionAcciones');
     $('tratamiento').value = ''; $('tratamiento').readOnly = false;
     $('precioLista').value = ''; $('monto').value = '';
     return;
@@ -1245,13 +1276,78 @@ function onElegirCotizacion() {
   info.innerHTML =
     'Honorarios Dr: <b>' + money(c.honorariosTotal) + '</b> · Bucket clínica: <b>' + money(bucket) + '</b> · Gran Total: <b>' + money(c.granTotal) + '</b>' +
     '<br>Procedimientos: ' + escapeHtml((c.procedimientos || []).join(', '));
-  // El "tratamiento" pasa a ser la etiqueta del paquete; el precio = gran total
+  // Estado de cuenta resumido
+  const abonado = c.abonado || 0;
+  const saldo = (c.saldoPendiente != null) ? c.saldoPendiente : c.granTotal;
+  const sBox = $('cotizacionSaldo');
+  sBox.innerHTML = 'Abonado: <b>' + money(abonado) + '</b> &nbsp;·&nbsp; Saldo pendiente: <b style="color:var(--accent-dark)">' + money(saldo) + '</b>';
+  sBox.classList.remove('hidden');
+  show('cotizacionAcciones');
+  $('liquidarSplit').checked = false;
+  // El "tratamiento" pasa a ser la etiqueta del paquete; el monto sugerido = saldo pendiente
   const label = (c.procedimientos || []).join(' + ') || ('Paquete ' + c.cotizacionId);
   $('tratamiento').value = label;
   $('tratamiento').readOnly = true;
   $('precioLista').value = c.granTotal;
-  $('monto').value = c.granTotal;
+  $('monto').value = saldo;
   TRAT_ELEGIDO = { nombre: label, costo: c.granTotal, linea: 'Cirugía' };
+}
+
+/* === ESTADO DE CUENTA (imprimible/compartible) === */
+
+async function abrirEstadoCuenta() {
+  if (!COT_ELEGIDA) return showMsg('Selecciona primero una cotización aceptada.');
+  hide('view-cobro'); hide('view-recibo'); hide('view-facturas');
+  show('view-estado');
+  window.scrollTo(0, 0);
+  $('estadoArea').innerHTML = '<div class="muted small">Cargando estado de cuenta…</div>';
+  const r = await callAPI('estadoCuenta', { cotizacionId: COT_ELEGIDA.cotizacionId });
+  if (!r.ok) { $('estadoArea').innerHTML = '<div class="alert alert-error">' + escapeHtml(r.error || 'Error') + '</div>'; return; }
+  pintarEstadoCuenta(r.data);
+}
+
+function pintarEstadoCuenta(d) {
+  const money = n => '$' + Number(n).toLocaleString('es-MX', { minimumFractionDigits: 2 });
+  let filasAbonos;
+  if (d.abonos && d.abonos.length) {
+    filasAbonos = d.abonos.map(a =>
+      '<tr><td>' + escapeHtml(a.fecha) + '</td>' +
+      '<td>' + escapeHtml(a.formaPago || '') + (a.terminal ? ' · ' + escapeHtml(a.terminal) : '') + '</td>' +
+      '<td style="text-align:right;">' + money(a.monto) + '</td></tr>'
+    ).join('');
+  } else {
+    filasAbonos = '<tr><td colspan="3" class="muted small">Sin abonos registrados aún.</td></tr>';
+  }
+  $('estadoArea').innerHTML =
+    '<div class="recibo">' +
+      '<div class="rb-h">' +
+        '<div><div class="brand">DR. MIGUEL SOTO</div><div class="sub">Cirujano Plástico Certificado</div></div>' +
+        '<div><div class="doc-tag">Estado de cuenta</div><div class="folio">' + escapeHtml(d.cotizacionId) + '</div></div>' +
+      '</div>' +
+      '<table>' +
+        '<tr><td class="k">Paciente</td><td>' + escapeHtml(d.paciente || '') + '</td></tr>' +
+        '<tr><td class="k">Procedimiento(s)</td><td>' + escapeHtml((d.procedimientos || []).join(', ')) + '</td></tr>' +
+        '<tr><td class="k">Estado</td><td>' + escapeHtml(d.estado || '') + '</td></tr>' +
+      '</table>' +
+      '<div style="margin:18px 0 6px;font-weight:600;">Pagos registrados</div>' +
+      '<table>' +
+        '<tr><td class="k">Fecha</td><td class="k">Forma de pago</td><td class="k" style="text-align:right;">Monto</td></tr>' +
+        filasAbonos +
+      '</table>' +
+      '<table style="margin-top:16px;">' +
+        '<tr><td class="k">Gran Total</td><td style="text-align:right;">' + money(d.granTotal) + '</td></tr>' +
+        '<tr><td class="k">Total abonado</td><td style="text-align:right;">' + money(d.abonado) + '</td></tr>' +
+        '<tr><td class="k total">Saldo pendiente</td><td class="total" style="text-align:right;">' + money(d.saldo) + '</td></tr>' +
+      '</table>' +
+      '<div class="pie">Estado de cuenta al ' + escapeHtml(new Date().toLocaleString('es-MX')) + '. Refleja los pagos registrados a la fecha de impresión.</div>' +
+    '</div>';
+}
+
+function imprimirEstado() { window.print(); }
+function volverDeEstado() {
+  hide('view-estado'); hide('view-recibo'); hide('view-facturas');
+  show('view-cobro');
+  window.scrollTo(0, 0);
 }
 
 /* === SPLIT CIRUGÍA — Multi-Entidad === */
@@ -1262,8 +1358,10 @@ function mostrarModalSplitCirugia(terminalDr) {
   if (!COT_ELEGIDA) {
     return showMsg('Selecciona la cotización aceptada antes de cobrar la cirugía.');
   }
-  const honorarios = COT_ELEGIDA.honorariosTotal;
-  const bucketClinica = (COT_ELEGIDA.bucketClinica != null) ? COT_ELEGIDA.bucketClinica : (COT_ELEGIDA.granTotal - COT_ELEGIDA.honorariosTotal);
+  // Se liquida el SALDO pendiente (no el total), por si ya hubo abonos previos
+  const honorarios = (COT_ELEGIDA.honPendiente != null) ? COT_ELEGIDA.honPendiente : COT_ELEGIDA.honorariosTotal;
+  const bucketClinica = (COT_ELEGIDA.bucketPendiente != null) ? COT_ELEGIDA.bucketPendiente
+    : ((COT_ELEGIDA.bucketClinica != null) ? COT_ELEGIDA.bucketClinica : (COT_ELEGIDA.granTotal - COT_ELEGIDA.honorariosTotal));
   const label = (COT_ELEGIDA.procedimientos || []).join(' + ') || ('Paquete ' + COT_ELEGIDA.cotizacionId);
   $('splitTrat').textContent = label + ' (' + COT_ELEGIDA.cotizacionId + ')';
   $('splitHon').textContent = '$' + Number(honorarios).toLocaleString('es-MX', { minimumFractionDigits: 2 });
