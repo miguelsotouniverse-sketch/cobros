@@ -1428,13 +1428,13 @@ function mostrarModalSplitCirugia(terminalDrSugerida) {
   $('splitTrat').textContent = label + ' (' + COT_ELEGIDA.cotizacionId + ')';
   $('splitHon').textContent = '$' + Number(honorarios).toLocaleString('es-MX', { minimumFractionDigits: 2 });
   $('splitBck').textContent = '$' + Number(bucketClinica).toLocaleString('es-MX', { minimumFractionDigits: 2 });
-  // Terminal del Dr (honorarios): dropdown de terminales electrónicas del Dr
-  const terminalesDr = ['Multiva MS', 'Multiva Amex', 'Mercado Pago', 'HSBC', 'Multiva', 'Santander', 'PayPal', 'Zelle'];
+  // Terminal del Dr (honorarios): electrónicas del Dr + Efectivo Dr. (efectivo libera IVA al Dr)
+  const terminalesDr = ['Multiva MS', 'Multiva Amex', 'Mercado Pago', 'HSBC', 'Multiva', 'Santander', 'PayPal', 'Zelle', 'Efectivo Dr.'];
   const selDr = $('splitTermDr');
   selDr.innerHTML = terminalesDr.map(function(t){ return '<option value="'+t+'">'+t+'</option>'; }).join('');
   if (terminalDrSugerida && terminalesDr.indexOf(terminalDrSugerida) >= 0) selDr.value = terminalDrSugerida;
-  // Terminal Renasté (bucket): dropdown de terminales Renasté
-  const terminalesRen = ['Multiva Renasté', 'Cuenta Renasté'];
+  // Terminal Renasté (bucket): electrónicas Renasté + Efectivo Renasté
+  const terminalesRen = ['Multiva Renasté', 'Cuenta Renasté', 'Efectivo Renasté'];
   const selRen = $('splitTermRen');
   selRen.innerHTML = terminalesRen.map(function(t){ return '<option value="'+t+'">'+t+'</option>'; }).join('');
   selRen.value = 'Multiva Renasté';
