@@ -167,28 +167,28 @@
       .card { border: 0; box-shadow: none; padding: 0; }
       .recibo { border: 0; padding: 0; }
     }
-    .modal-overlay {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.55);
-      display: flex; align-items: center; justify-content: center;
-      z-index: 1000; padding: 24px;
-    }
-    .modal-card {
-      background: #fff; border-radius: 8px;
-      padding: 24px; max-width: 520px; width: 100%;
-      box-shadow: 0 4px 28px rgba(0,0,0,0.2);
-    }
-    .modal-card h3 { margin: 0 0 12px 0; }
-    .split-row {
-      display: grid; grid-template-columns: 1.4fr 1fr 1.4fr;
-      gap: 10px; padding: 10px 12px; align-items: center;
-      background: #f6f3ee; border-radius: 6px; margin: 6px 0;
-    }
-    .split-row .lbl-r { color: #666; font-size: 14px; }
-    .split-row .amt { font-weight: bold; text-align: right; }
-    .split-row select { padding: 6px; width: 100%; }
-    .modal-actions {
-      display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px;
-    }
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000; padding: 24px;
+}
+.modal-card {
+  background: #fff; border-radius: 8px;
+  padding: 24px; max-width: 520px; width: 100%;
+  box-shadow: 0 4px 28px rgba(0,0,0,0.2);
+}
+.modal-card h3 { margin: 0 0 12px 0; }
+.split-row {
+  display: grid; grid-template-columns: 1.4fr 1fr 1.4fr;
+  gap: 10px; padding: 10px 12px; align-items: center;
+  background: #f6f3ee; border-radius: 6px; margin: 6px 0;
+}
+.split-row .lbl-r { color: #666; font-size: 14px; }
+.split-row .amt { font-weight: bold; text-align: right; }
+.split-row select { padding: 6px; width: 100%; }
+.modal-actions {
+  display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px;
+}
   </style>
 </head>
 <body>
@@ -287,6 +287,11 @@
             <div id="tratResultados" class="trat-resultados hidden"></div>
           </div>
         </div>
+        <div class="form-group hidden" id="cotizacionBox">
+          <label class="lbl">Cotización aceptada (obligatoria para cirugía)</label>
+          <select id="cotizacionSel"></select>
+          <div id="cotizacionInfo" class="muted small" style="margin-top:6px;"></div>
+        </div>
         <div class="grid2">
           <div class="form-group"><label class="lbl">Precio de lista</label><input type="number" id="precioLista" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></div>
           <div class="form-group"><label class="lbl" id="lblMonto">Monto a cobrar</label><input type="number" id="monto" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></div>
@@ -374,6 +379,8 @@ let PRECIOS = [];
 let tratSel = -1;
 let CARRITO = [];
 let TRAT_ELEGIDO = null; // tratamiento seleccionado de la lista (estricto)
+let COT_ELEGIDA = null; // cotización aceptada elegida (cirugía)
+let COTIZACIONES_PAC = []; // cotizaciones aceptadas del paciente actual
 let BUSCANDO = null;
 let ENVIANDO = false;
 
@@ -495,8 +502,17 @@ function initApp() {
     $('precioLista').value = '';
     $('tratamiento').readOnly = false;
     TRAT_ELEGIDO = null;
+    COT_ELEGIDA = null;
     hide('tratResultados');
+    if (this.value === 'Cirugía') {
+      // Cirugía: se cobra contra una cotización aceptada, no por búsqueda de tratamiento
+      cargarCotizaciones();
+    } else {
+      hide('cotizacionBox');
+      $('cotizacionInfo').textContent = '';
+    }
   });
+  $('cotizacionSel').addEventListener('change', onElegirCotizacion);
   // Al corregir un campo marcado en rojo, se le quita el resaltado
   ['linea','tratamiento','monto','metodo','terminal','moneda','metodoTrat','terminalTrat','monedaTrat','medico','condicion','tc','buscaPac','autorizaDesc'].forEach(id => {
     const el = $(id);
@@ -590,12 +606,17 @@ function elegirPaciente(p) {
   show('pacSel');
   hide('pacNoExiste');
   hide('histBox');
+  // Si ya estaba seleccionada la línea Cirugía, recargar las cotizaciones del nuevo paciente
+  if ($('linea').value === 'Cirugía') cargarCotizaciones();
 }
 function limpiarPaciente() {
   PAC = null;
+  COT_ELEGIDA = null;
+  COTIZACIONES_PAC = [];
   hide('pacSel');
   hide('histBox');
   $('buscaPac').value = '';
+  if ($('linea').value === 'Cirugía') cargarCotizaciones();
   $('buscaPac').focus();
 }
 
@@ -688,6 +709,7 @@ async function enviarCobro() {
     precioLista: t.precioLista, descuentoPct: t.descuentoPct,
     tipoCambio: t.moneda === 'USD' ? t.tipoCambio : '',
     factura: comun.factura, numFactura: comun.numFactura,
+    cotizacionId: t.cotizacionId || '',
     observaciones: [comun.observaciones, t.obsDescuento].filter(Boolean).join(' · ')
   }));
 
@@ -768,6 +790,8 @@ function nuevoCobro() {
   PAC = null;
   CARRITO = [];
   TRAT_ELEGIDO = null;
+  COT_ELEGIDA = null;
+  COTIZACIONES_PAC = [];
   renderCarrito();
   ['tratamiento', 'monto', 'tc', 'obs', 'buscaPac', 'numFactura', 'precioLista', 'descuento', 'descuentoMonto', 'autorizaDesc'].forEach(id => $(id).value = '');
   $('tratamiento').readOnly = false;
@@ -779,6 +803,7 @@ function nuevoCobro() {
   $('pagoDistinto').checked = false;
   limpiarErrores();
   hide('pacSel'); hide('boxTC'); hide('previewMXN'); hide('msg'); hide('boxNumFactura'); hide('boxPagoTrat'); hide('histBox'); hide('boxAutoriza');
+  hide('cotizacionBox'); $('cotizacionInfo').textContent = ''; $('cotizacionSel').innerHTML = '';
   hide('view-recibo'); show('view-cobro');
   window.scrollTo(0, 0);
 }
@@ -828,7 +853,7 @@ function elegirTrat(i) {
   if (!p) return;
   $('tratamiento').value = p.nombre;
   $('precioLista').value = p.costo;
-  TRAT_ELEGIDO = { nombre: p.nombre, costo: p.costo, linea: p.linea, desglose: p.desglose };
+  TRAT_ELEGIDO = { nombre: p.nombre, costo: p.costo, linea: p.linea };
   hide('tratResultados');
   calcularMonto();
 }
@@ -903,18 +928,22 @@ function agregarTratamiento() {
   const tratamiento = $('tratamiento').value.trim();
   const monto = parseFloat($('monto').value);
 
-  // === Interceptación Cirugía: split obligatorio SOLO si lleva factura ===
-  if (linea === 'Cirugía' && TRAT_ELEGIDO && TRAT_ELEGIDO.desglose) {
+  // === Interceptación Cirugía: exige cotización aceptada y, si es electrónico Dr, pide split ===
+  if (linea === 'Cirugía') {
     const condicionTmp = $('condicion').value;
     const esCortesiaTmp = (condicionTmp === 'Cortesía');
-    const facturaTmp = $('factura').value;
     if (!esCortesiaTmp) {
+      if (!COT_ELEGIDA) {
+        marcarError('cotizacionSel');
+        return showMsg('Esta cirugía requiere una cotización ACEPTADA. Selecciónala en el menú "Cotización aceptada".');
+      }
       const usaPropioTmp = $('pagoDistinto').checked;
       const terminalTmp = usaPropioTmp ? $('terminalTrat').value : $('terminal').value;
       const ELECTRONICAS_DR = ['Multiva MS','Multiva Amex','Mercado Pago','HSBC','Multiva','Santander','PayPal','Zelle'];
       if (ELECTRONICAS_DR.indexOf(terminalTmp) >= 0) {
         return mostrarModalSplitCirugia(terminalTmp);
       }
+      // Efectivo (No aplica) / Efectivo Dr/Renasté / terminal Renasté: un solo cobro del paquete (el backend auto-divide)
     }
   }
 
@@ -924,10 +953,13 @@ function agregarTratamiento() {
   const faltan = [];
   if (!linea) { marcarError('linea'); faltan.push('línea de negocio'); }
   if (!tratamiento) { marcarError('tratamiento'); faltan.push('tratamiento'); }
+  // Tratamiento estricto: debe haberse elegido de la lista
   if (tratamiento && !TRAT_ELEGIDO) { marcarError('tratamiento'); faltan.push('elegir el tratamiento de la lista'); }
   if (!condicion) { marcarError('condicion'); faltan.push('condición de pago'); }
+  // En cortesía el monto es 0 (válido); en lo demás debe ser > 0
   if (!esCortesia && !(monto > 0)) { marcarError('monto'); faltan.push('monto'); }
 
+  // Descuento o cortesía: exige quién autoriza
   const descPct = parseFloat($('descuento').value) || 0;
   const descMonto = parseFloat($('descuentoMonto').value) || 0;
   const autoriza = $('autorizaDesc').value.trim();
@@ -936,6 +968,7 @@ function agregarTratamiento() {
     faltan.push(esCortesia ? 'quién autoriza la cortesía' : 'quién autoriza el descuento');
   }
 
+  // Método de pago: general o propio del tratamiento
   let metodo, terminal, moneda;
   if ($('pagoDistinto').checked && !esCortesia) {
     metodo = $('metodoTrat').value; terminal = $('terminalTrat').value; moneda = $('monedaTrat').value;
@@ -953,6 +986,7 @@ function agregarTratamiento() {
 
   if (faltan.length) return showMsg('Faltan datos del tratamiento: ' + faltan.join(', ') + '. Revisa lo marcado en rojo.');
 
+  // Texto de descuento/cortesía para observaciones/auditoría
   const money0 = n => '$' + Number(n).toLocaleString('es-MX', { minimumFractionDigits: 2 });
   const valorLista = $('precioLista').value !== '' ? parseFloat($('precioLista').value) : 0;
   let obsDescuento = '';
@@ -978,7 +1012,8 @@ function agregarTratamiento() {
     obsDescuento: obsDescuento,
     monto: esCortesia ? 0 : monto,
     metodo: metodo, terminal: terminal, moneda: moneda,
-    tipoCambio: tc
+    tipoCambio: tc,
+    cotizacionId: (linea === 'Cirugía' && COT_ELEGIDA) ? COT_ELEGIDA.cotizacionId : ''
   });
   renderCarrito();
   limpiarTratamiento();
@@ -1061,12 +1096,16 @@ function limpiarTratamiento() {
   $('descuentoMonto').disabled = false;
   $('pagoDistinto').disabled = false;
   TRAT_ELEGIDO = null;
+  COT_ELEGIDA = null;
   $('linea').selectedIndex = 0;
   $('condicion').selectedIndex = 0;
   $('pagoDistinto').checked = false;
   hide('boxPagoTrat');
   hide('boxAutoriza');
   hide('previewMXN');
+  hide('cotizacionBox');
+  $('cotizacionInfo').textContent = '';
+  $('cotizacionSel').innerHTML = '';
   $('linea').focus();
 }
 
@@ -1158,33 +1197,83 @@ function limpiarErrores() {
 }
 
 
+/* === COTIZACIONES (Cirugía exige cotización aceptada) === */
+
+async function cargarCotizaciones() {
+  COT_ELEGIDA = null;
+  COTIZACIONES_PAC = [];
+  const box = $('cotizacionBox');
+  const sel = $('cotizacionSel');
+  const info = $('cotizacionInfo');
+  box.classList.remove('hidden');
+  if (!PAC) {
+    sel.innerHTML = '<option value="">— selecciona primero al paciente —</option>';
+    info.textContent = '';
+    return;
+  }
+  sel.innerHTML = '<option value="">Cargando cotizaciones…</option>';
+  info.textContent = '';
+  const r = await callAPI('cotizacionesPaciente', { idPaciente: PAC.id });
+  if (!r.ok || !r.data || !r.data.length) {
+    sel.innerHTML = '<option value="">— sin cotización aceptada —</option>';
+    info.innerHTML = '<span style="color:var(--error)">Este paciente no tiene una cotización aceptada. No se puede cobrar cirugía hasta generarla en el cotizador.</span>';
+    return;
+  }
+  COTIZACIONES_PAC = r.data;
+  const money = n => '$' + Number(n).toLocaleString('es-MX', { minimumFractionDigits: 2 });
+  sel.innerHTML = '<option value="">— elegir cotización —</option>' + r.data.map(c =>
+    '<option value="' + escapeHtml(c.cotizacionId) + '">' +
+      escapeHtml(c.cotizacionId) + ' · ' + money(c.granTotal) + ' · ' + escapeHtml((c.procedimientos || []).join(', ')) +
+    '</option>'
+  ).join('');
+}
+
+function onElegirCotizacion() {
+  const id = $('cotizacionSel').value;
+  const info = $('cotizacionInfo');
+  const c = COTIZACIONES_PAC.find(x => x.cotizacionId === id);
+  if (!c) {
+    COT_ELEGIDA = null; TRAT_ELEGIDO = null;
+    info.textContent = '';
+    $('tratamiento').value = ''; $('tratamiento').readOnly = false;
+    $('precioLista').value = ''; $('monto').value = '';
+    return;
+  }
+  COT_ELEGIDA = c;
+  const money = n => '$' + Number(n).toLocaleString('es-MX', { minimumFractionDigits: 2 });
+  const bucket = (c.bucketClinica != null) ? c.bucketClinica : (c.granTotal - c.honorariosTotal);
+  info.innerHTML =
+    'Honorarios Dr: <b>' + money(c.honorariosTotal) + '</b> · Bucket clínica: <b>' + money(bucket) + '</b> · Gran Total: <b>' + money(c.granTotal) + '</b>' +
+    '<br>Procedimientos: ' + escapeHtml((c.procedimientos || []).join(', '));
+  // El "tratamiento" pasa a ser la etiqueta del paquete; el precio = gran total
+  const label = (c.procedimientos || []).join(' + ') || ('Paquete ' + c.cotizacionId);
+  $('tratamiento').value = label;
+  $('tratamiento').readOnly = true;
+  $('precioLista').value = c.granTotal;
+  $('monto').value = c.granTotal;
+  TRAT_ELEGIDO = { nombre: label, costo: c.granTotal, linea: 'Cirugía' };
+}
+
 /* === SPLIT CIRUGÍA — Multi-Entidad === */
 
 let _splitCirugiaPending = null;
 
 function mostrarModalSplitCirugia(terminalDr) {
-  if (!TRAT_ELEGIDO || !TRAT_ELEGIDO.desglose) {
-    return showMsg('Falta el desglose del tratamiento. Recarga la página.');
+  if (!COT_ELEGIDA) {
+    return showMsg('Selecciona la cotización aceptada antes de cobrar la cirugía.');
   }
-  const honorarios = TRAT_ELEGIDO.desglose.honorarios;
-  const bucketClinica = TRAT_ELEGIDO.desglose.bucketClinica;
-  $('splitTrat').textContent = TRAT_ELEGIDO.nombre;
+  const honorarios = COT_ELEGIDA.honorariosTotal;
+  const bucketClinica = (COT_ELEGIDA.bucketClinica != null) ? COT_ELEGIDA.bucketClinica : (COT_ELEGIDA.granTotal - COT_ELEGIDA.honorariosTotal);
+  const label = (COT_ELEGIDA.procedimientos || []).join(' + ') || ('Paquete ' + COT_ELEGIDA.cotizacionId);
+  $('splitTrat').textContent = label + ' (' + COT_ELEGIDA.cotizacionId + ')';
   $('splitHon').textContent = '$' + Number(honorarios).toLocaleString('es-MX', { minimumFractionDigits: 2 });
   $('splitBck').textContent = '$' + Number(bucketClinica).toLocaleString('es-MX', { minimumFractionDigits: 2 });
   $('splitTermDr').textContent = terminalDr;
-  const factura = $('factura').value;
-  let terminales, defaultTerm;
-  if (factura === 'Sí') {
-    terminales = ['Multiva Renasté', 'Cuenta Renasté'];
-    defaultTerm = 'Multiva Renasté';
-  } else {
-    terminales = ['Multiva MS','Multiva Amex','Mercado Pago','HSBC','Multiva','Santander','PayPal','Zelle','Multiva Renasté','Cuenta Renasté'];
-    defaultTerm = terminalDr;
-  }
+  const terminalesRen = ['Multiva Renasté', 'Cuenta Renasté'];
   const sel = $('splitTermRen');
-  sel.innerHTML = terminales.map(function(t){ return '<option value="'+t+'">'+t+'</option>'; }).join('');
-  sel.value = defaultTerm;
-  _splitCirugiaPending = { terminalDr: terminalDr, honorarios: honorarios, bucketClinica: bucketClinica };
+  sel.innerHTML = terminalesRen.map(function(t){ return '<option value="'+t+'">'+t+'</option>'; }).join('');
+  sel.value = 'Multiva Renasté';
+  _splitCirugiaPending = { terminalDr: terminalDr, honorarios: honorarios, bucketClinica: bucketClinica, cotizacionId: COT_ELEGIDA.cotizacionId, label: label, granTotal: COT_ELEGIDA.granTotal };
   show('modalSplitCirugia');
 }
 
@@ -1199,42 +1288,39 @@ function confirmarSplitCirugia() {
   if (!terminalRen) return showMsg('Selecciona la terminal Renasté.');
 
   const linea = 'Cirugía';
-  const tratamiento = TRAT_ELEGIDO.nombre;
+  const tratamiento = _splitCirugiaPending.label;
+  const cotId = _splitCirugiaPending.cotizacionId;
   const condicion = $('condicion').value;
   const usaPropio = $('pagoDistinto').checked;
   const metodo = usaPropio ? $('metodoTrat').value : $('metodo').value;
   const moneda = usaPropio ? $('monedaTrat').value : $('moneda').value;
   const tc = moneda === 'USD' ? parseFloat($('tc').value) : '';
-
-  const descPct = parseFloat($('descuento').value) || 0;
-  const descMonto = parseFloat($('descuentoMonto').value) || 0;
   const autoriza = $('autorizaDesc').value.trim();
-  if ((descPct > 0 || descMonto > 0) && !autoriza) {
-    return showMsg('Captura quién autoriza el descuento.');
-  }
 
   CARRITO.push({
     linea: linea, tratamiento: tratamiento, area: '',
     condicion: condicion, esCortesia: false,
-    precioLista: TRAT_ELEGIDO.costo,
-    descuentoPct: descPct || '', descuentoMonto: descMonto || '',
+    precioLista: _splitCirugiaPending.granTotal,
+    descuentoPct: '', descuentoMonto: '',
     autorizaDesc: autoriza || '',
-    obsDescuento: 'Honorarios (split Cirugía)',
+    obsDescuento: 'Honorarios (split Cirugía · ' + cotId + ')',
     monto: _splitCirugiaPending.honorarios,
     metodo: metodo, terminal: _splitCirugiaPending.terminalDr,
-    moneda: moneda, tipoCambio: tc
+    moneda: moneda, tipoCambio: tc,
+    cotizacionId: cotId
   });
 
   CARRITO.push({
     linea: linea, tratamiento: tratamiento, area: '',
     condicion: condicion, esCortesia: false,
-    precioLista: TRAT_ELEGIDO.costo,
-    descuentoPct: descPct || '', descuentoMonto: descMonto || '',
+    precioLista: _splitCirugiaPending.granTotal,
+    descuentoPct: '', descuentoMonto: '',
     autorizaDesc: autoriza || '',
-    obsDescuento: 'Bucket clínica (split Cirugía)',
+    obsDescuento: 'Bucket clínica (split Cirugía · ' + cotId + ')',
     monto: _splitCirugiaPending.bucketClinica,
     metodo: metodo, terminal: terminalRen,
-    moneda: moneda, tipoCambio: tc
+    moneda: moneda, tipoCambio: tc,
+    cotizacionId: cotId
   });
 
   renderCarrito();
@@ -1242,9 +1328,7 @@ function confirmarSplitCirugia() {
   hide('modalSplitCirugia');
   _splitCirugiaPending = null;
 }
-
 </script>
-
 <div id="modalSplitCirugia" class="modal-overlay hidden">
   <div class="modal-card">
     <h3 class="serif">Cirugía requiere 2 cobros</h3>
