@@ -828,7 +828,7 @@ function elegirTrat(i) {
   if (!p) return;
   $('tratamiento').value = p.nombre;
   $('precioLista').value = p.costo;
-  TRAT_ELEGIDO = { nombre: p.nombre, costo: p.costo, linea: p.linea };
+  TRAT_ELEGIDO = { nombre: p.nombre, costo: p.costo, linea: p.linea, desglose: p.desglose };
   hide('tratResultados');
   calcularMonto();
 }
