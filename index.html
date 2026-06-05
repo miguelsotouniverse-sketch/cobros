@@ -375,8 +375,10 @@
         <div id="estadoArea"></div>
         <div class="acciones noprint">
           <button class="btn btn-secondary" onclick="imprimirEstado()">🖨 Imprimir / Guardar PDF</button>
+          <button class="btn btn-secondary" id="btnEnviarCorreo" onclick="enviarEstadoCorreo(this)">✉ Enviar por correo</button>
           <button class="btn btn-primary" style="width:auto;margin-top:0;" onclick="volverDeEstado()">← Volver al cobro</button>
         </div>
+        <div id="estadoMsg" class="muted small noprint" style="text-align:center;margin-top:8px;"></div>
       </div>
     </section>
   </main>
@@ -402,6 +404,7 @@ let CARRITO = [];
 let TRAT_ELEGIDO = null; // tratamiento seleccionado de la lista (estricto)
 let COT_ELEGIDA = null; // cotización aceptada elegida (cirugía)
 let COTIZACIONES_PAC = []; // cotizaciones aceptadas del paciente actual
+let ESTADO_ACTUAL = null; // último estado de cuenta cargado (para compartir)
 let BUSCANDO = null;
 let ENVIANDO = false;
 
@@ -536,6 +539,15 @@ function initApp() {
     }
   });
   $('cotizacionSel').addEventListener('change', onElegirCotizacion);
+  $('liquidarSplit').addEventListener('change', function() {
+    // Al liquidar, sugiere el saldo completo; si se desmarca (abono), limpia para capturar el parcial
+    if (this.checked && COT_ELEGIDA) {
+      const saldo = (COT_ELEGIDA.saldoPendiente != null) ? COT_ELEGIDA.saldoPendiente : COT_ELEGIDA.granTotal;
+      $('monto').value = saldo;
+    } else {
+      $('monto').value = '';
+    }
+  });
   // Al corregir un campo marcado en rojo, se le quita el resaltado
   ['linea','tratamiento','monto','metodo','terminal','moneda','metodoTrat','terminalTrat','monedaTrat','medico','condicion','tc','buscaPac','autorizaDesc'].forEach(id => {
     const el = $(id);
@@ -743,7 +755,7 @@ async function enviarCobro() {
   ENVIANDO = false;
   b.disabled = false; b.textContent = 'Registrar cobro';
   if (!r.ok) return showMsg(r.error || 'No se pudo registrar.');
-  pintarReciboMultiple(r.recibos, comun);
+  pintarReciboMultiple(r.recibos, comun, r.estadosCuenta || {});
   // Bloquear "Nuevo cobro" hasta que se imprima este recibo
   const bn = $('btnNuevoCobro');
   if (bn) bn.disabled = true;
@@ -757,8 +769,9 @@ async function enviarCobro() {
 // ============================================================
 // RECIBO (múltiple: varios tratamientos en un solo comprobante)
 // ============================================================
-function pintarReciboMultiple(recibos, comun) {
+function pintarReciboMultiple(recibos, comun, estadosCuenta) {
   const money = n => '$' + Number(n).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  estadosCuenta = estadosCuenta || {};
   const d0 = recibos[0] || {};
   let filas =
     row('Fecha', d0.fecha) +
@@ -788,6 +801,30 @@ function pintarReciboMultiple(recibos, comun) {
     filas += '<tr><td class="k total">Total cobrado</td><td class="total">' + money(totalMXN) + ' MXN</td></tr>';
   }
 
+  // Bloque de estado de cuenta para cirugías por cotización (saldo + histórico)
+  let bloqueEstados = '';
+  Object.keys(estadosCuenta).forEach(cid => {
+    const e = estadosCuenta[cid];
+    if (!e) return;
+    const liquidado = Number(e.saldo) <= 0.01;
+    const abonosRows = (e.abonos && e.abonos.length)
+      ? e.abonos.map(a => '<tr><td class="k">' + escapeHtml(a.fecha) + '</td><td>' + escapeHtml(a.formaPago || '') + '</td><td style="text-align:right;">' + money(a.monto) + '</td></tr>').join('')
+      : '<tr><td colspan="3" class="muted small">—</td></tr>';
+    bloqueEstados +=
+      '<div style="margin-top:18px;padding-top:12px;border-top:1px dashed var(--border);">' +
+        '<div style="font-weight:600;">Estado de cuenta · ' + escapeHtml(cid) + '</div>' +
+        (liquidado
+          ? '<div style="color:var(--success);font-weight:600;margin:6px 0;">✓ Procedimiento LIQUIDADO</div>'
+          : '<div style="color:var(--error);font-weight:600;margin:6px 0;">PAGO PARCIAL · Este procedimiento NO está liquidado</div>') +
+        '<table style="margin-top:4px;">' + abonosRows + '</table>' +
+        '<table style="margin-top:8px;">' +
+          '<tr><td class="k">Gran Total</td><td style="text-align:right;">' + money(e.granTotal) + '</td></tr>' +
+          '<tr><td class="k">Total abonado</td><td style="text-align:right;">' + money(e.abonado) + '</td></tr>' +
+          '<tr><td class="k total">Saldo pendiente</td><td class="total" style="text-align:right;">' + money(e.saldo) + '</td></tr>' +
+        '</table>' +
+      '</div>';
+  });
+
   const foliosTxt = recibos.map(d => d.folio).join(', ');
   $('reciboArea').innerHTML =
     '<div class="recibo">' +
@@ -796,6 +833,7 @@ function pintarReciboMultiple(recibos, comun) {
         '<div><div class="doc-tag">Recibo de cobro</div><div class="folio">' + escapeHtml(foliosTxt) + '</div></div>' +
       '</div>' +
       '<table>' + filas + '</table>' +
+      bloqueEstados +
       '<div class="pie">Atendió: ' + escapeHtml(d0.capturo || '') + ' · Conserve este recibo como comprobante de su pago.</div>' +
     '</div>';
 }
@@ -1280,16 +1318,18 @@ function onElegirCotizacion() {
   const abonado = c.abonado || 0;
   const saldo = (c.saldoPendiente != null) ? c.saldoPendiente : c.granTotal;
   const sBox = $('cotizacionSaldo');
-  sBox.innerHTML = 'Abonado: <b>' + money(abonado) + '</b> &nbsp;·&nbsp; Saldo pendiente: <b style="color:var(--accent-dark)">' + money(saldo) + '</b>';
+  sBox.innerHTML = 'Abonado: <b>' + money(abonado) + '</b> &nbsp;·&nbsp; Saldo pendiente: <b style="color:var(--accent-dark)">' + money(saldo) + '</b>' +
+    '<div class="muted small" style="margin-top:4px;">Captura abajo el <b>monto del abono</b>, o marca "Liquidar el saldo" para cobrar todo lo pendiente.</div>';
   sBox.classList.remove('hidden');
   show('cotizacionAcciones');
   $('liquidarSplit').checked = false;
-  // El "tratamiento" pasa a ser la etiqueta del paquete; el monto sugerido = saldo pendiente
+  // El "tratamiento" pasa a ser la etiqueta del paquete; el monto lo captura recepción (abono)
   const label = (c.procedimientos || []).join(' + ') || ('Paquete ' + c.cotizacionId);
   $('tratamiento').value = label;
   $('tratamiento').readOnly = true;
   $('precioLista').value = c.granTotal;
-  $('monto').value = saldo;
+  $('monto').value = '';
+  $('monto').placeholder = 'Monto del abono (saldo: ' + money(saldo) + ')';
   TRAT_ELEGIDO = { nombre: label, costo: c.granTotal, linea: 'Cirugía' };
 }
 
@@ -1307,6 +1347,7 @@ async function abrirEstadoCuenta() {
 }
 
 function pintarEstadoCuenta(d) {
+  ESTADO_ACTUAL = d;
   const money = n => '$' + Number(n).toLocaleString('es-MX', { minimumFractionDigits: 2 });
   let filasAbonos;
   if (d.abonos && d.abonos.length) {
@@ -1348,6 +1389,23 @@ function volverDeEstado() {
   hide('view-estado'); hide('view-recibo'); hide('view-facturas');
   show('view-cobro');
   window.scrollTo(0, 0);
+}
+async function enviarEstadoCorreo(btn) {
+  const d = ESTADO_ACTUAL;
+  if (!d) return;
+  const msg = $('estadoMsg');
+  msg.style.color = '';
+  msg.textContent = 'Enviando estado de cuenta por correo…';
+  if (btn) btn.disabled = true;
+  const r = await callAPI('enviarEstadoCorreo', { cotizacionId: d.cotizacionId });
+  if (btn) btn.disabled = false;
+  if (!r.ok) {
+    msg.style.color = 'var(--error)';
+    msg.textContent = r.error || 'No se pudo enviar el correo.';
+    return;
+  }
+  msg.style.color = 'var(--success)';
+  msg.textContent = '✓ Estado de cuenta enviado a ' + r.email + ((r.desde && r.desde.indexOf('@') < 0) ? ' (desde la cuenta del sistema)' : '');
 }
 
 /* === SPLIT CIRUGÍA — Multi-Entidad === */
