@@ -785,7 +785,7 @@ async function enviarCobro() {
   b.disabled = false; b.textContent = 'Registrar cobro';
   if (!r.ok) return showMsg(r.error || 'No se pudo registrar.');
   pintarReciboMultiple(r.recibos, comun, r.estadosCuenta || {});
-  pintarReparto(r.reparto || []);
+  pintarReparto(r.reparto || [], r.desglosesReales || {});
   // Bloquear "Nuevo cobro" hasta que se imprima este recibo
   const bn = $('btnNuevoCobro');
   if (bn) bn.disabled = true;
@@ -870,20 +870,55 @@ function pintarReciboMultiple(recibos, comun, estadosCuenta) {
 function row(k, v) { return '<tr><td class="k">' + k + '</td><td>' + escapeHtml(String(v == null ? '' : v)) + '</td></tr>'; }
 
 // Distribución del dinero: a qué caja/terminal va cada peso (uso interno de recepción)
-function pintarReparto(reparto) {
+function pintarReparto(reparto, desglosesReales) {
   const card = $('repartoCard');
   const area = $('repartoArea');
-  if (!reparto || !reparto.length) { card.classList.add('hidden'); area.innerHTML = ''; return; }
+  desglosesReales = desglosesReales || {};
+  reparto = reparto || [];
   const money = n => '$' + Number(n).toLocaleString('es-MX', { minimumFractionDigits: 2 });
   const cajaEfectivo = t => t === 'Efectivo Dr.' ? 'Caja Dr. Miguel Soto' : (t === 'Efectivo Renasté' ? 'Caja Renasté' : t);
-  const entLabel = e => e === 'Dr' ? 'Dr. Miguel Soto' : (e === 'Clinica' ? 'Renasté' : '');
+  const entLabel = e => e === 'Dr' ? 'Dr. Miguel Soto' : (e === 'Clinica' ? 'Renasté' : e);
+  const fila = (k, v, big) => '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border-soft);' +
+    (big ? 'font-size:1.05rem;' : '') + '"><span>' + escapeHtml(k) + '</span><b>' + money(v) + '</b></div>';
+
+  // Si se liquidó una cirugía, mostramos el DESGLOSE REAL (después de las reglas), no el reparto físico
+  const claves = Object.keys(desglosesReales);
+  if (claves.length) {
+    let html = '<div class="section-label serif" style="margin-top:0;">Desglose real — cuánto recibe cada quién</div>' +
+      '<div class="muted small" style="margin:-6px 0 12px;">Después de todas las reglas (excedente e IVA al Dr, neto de la clínica, IVA al SAT). Uso interno.</div>';
+    claves.forEach(cid => {
+      const d = desglosesReales[cid];
+      html += '<div style="border:1px solid var(--border-soft);border-radius:6px;padding:14px 16px;margin-bottom:12px;">' +
+        '<div style="font-weight:600;margin-bottom:8px;">' + escapeHtml(cid) + (d.procedimiento ? ' · ' + escapeHtml(d.procedimiento) : '') + '  —  total ' + money(d.granTotal) + '</div>';
+      html += fila('Dr. Miguel Soto recibe', d.drRecibe, true);
+      html += '<div class="muted small" style="margin:2px 0 8px;">honorarios ' + money(d.honorarios) + ' + excedente ' + money(d.excedente) +
+        (Number(d.ivaLiberado) > 0 ? ' + IVA liberado ' + money(d.ivaLiberado) : '') + '</div>';
+      html += fila('Renasté (clínica) neto', d.clinicaNeta, false);
+      html += fila('IVA al SAT', d.ivaSAT, false);
+      if (d.deudas && d.deudas.length) {
+        d.deudas.forEach(de => {
+          html += '<div style="margin-top:10px;padding-top:8px;border-top:1px dashed var(--border);color:var(--accent-dark);">' +
+            '↪ <b>' + escapeHtml(entLabel(de.deudor)) + '</b> le debe a <b>' + escapeHtml(entLabel(de.acreedor)) + '</b>: ' + money(de.monto) +
+            '<div class="muted small">El efectivo entró a una caja pero parte corresponde a la otra entidad; se transfiere al liquidar deudas.</div>' +
+            '</div>';
+        });
+      }
+      html += '</div>';
+    });
+    area.innerHTML = html;
+    card.classList.remove('hidden');
+    return;
+  }
+
+  // Si NO hubo liquidación (anticipo/abono), mostramos a qué caja/terminal entró el dinero
+  if (!reparto.length) { card.classList.add('hidden'); area.innerHTML = ''; return; }
   const efectivos = reparto.filter(r => r.esEfectivo);
   const otros = reparto.filter(r => !r.esEfectivo);
   let html = '<div class="section-label serif" style="margin-top:0;">Distribución del dinero</div>' +
-    '<div class="muted small" style="margin:-6px 0 12px;">Cómo queda repartido este cobro (uso interno, no aparece en el recibo del paciente).</div>';
+    '<div class="muted small" style="margin:-6px 0 12px;">A qué caja/terminal entró este cobro (uso interno, no aparece en el recibo del paciente).</div>';
   if (efectivos.length) {
     html += '<div style="background:#fbf3e6;border:1px solid #e8d9bc;border-radius:6px;padding:14px 16px;margin-bottom:12px;">' +
-      '<div style="font-weight:600;margin-bottom:8px;">💵 Reparte el efectivo en las cajas:</div>';
+      '<div style="font-weight:600;margin-bottom:8px;">💵 Efectivo recibido en:</div>';
     efectivos.forEach(r => {
       html += '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #ecdfc4;"><span>' +
         escapeHtml(cajaEfectivo(r.terminal)) + '</span><b>' + money(r.monto) + '</b></div>';
