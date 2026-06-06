@@ -416,13 +416,13 @@ const $ = id => document.getElementById(id);
 const show = id => $(id).classList.remove('hidden');
 const hide = id => $(id).classList.add('hidden');
 
-// Efectivo: no se pregunta terminal; se fija a "Efectivo (No aplica)" y se oculta el campo
+// Efectivo: no se pregunta terminal; el efectivo entra completo a la Caja Dr. Miguel Soto
 function aplicaEfectivoTerminal() {
-  if ($('metodo').value === 'Efectivo') { $('terminal').value = 'Efectivo (No aplica)'; hide('grupoTerminal'); }
+  if ($('metodo').value === 'Efectivo') { $('terminal').value = 'Efectivo Dr.'; hide('grupoTerminal'); }
   else { show('grupoTerminal'); }
 }
 function aplicaEfectivoTerminalTrat() {
-  if ($('metodoTrat').value === 'Efectivo') { $('terminalTrat').value = 'Efectivo (No aplica)'; hide('grupoTerminalTrat'); }
+  if ($('metodoTrat').value === 'Efectivo') { $('terminalTrat').value = 'Efectivo Dr.'; hide('grupoTerminalTrat'); }
   else { show('grupoTerminalTrat'); }
 }
 
@@ -1068,8 +1068,12 @@ function agregarTratamiento() {
       const usaPropioTmp = $('pagoDistinto').checked;
       const terminalTmp = usaPropioTmp ? $('terminalTrat').value : $('terminal').value;
       const ELECTRONICAS_DR = ['Multiva MS','Multiva Amex','Mercado Pago','HSBC','Multiva','Santander','PayPal','Zelle'];
-      const quiereSplit = $('liquidarSplit').checked;
-      // Liquidación del saldo con split: abre el modal SIEMPRE (ahí se eligen ambas terminales)
+      // Si el monto cubre TODO el saldo pendiente, es una liquidación → split automático (dos cajas),
+      // aunque recepción no haya marcado la casilla. Así no se le olvida repartir.
+      const montoVal = parseFloat($('monto').value) || 0;
+      const saldoPend = (COT_ELEGIDA.saldoPendiente != null) ? COT_ELEGIDA.saldoPendiente : COT_ELEGIDA.granTotal;
+      const liquidaTodo = montoVal >= (saldoPend - 0.01);
+      const quiereSplit = $('liquidarSplit').checked || liquidaTodo;
       if (quiereSplit) {
         return mostrarModalSplitCirugia(terminalTmp);
       }
