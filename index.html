@@ -271,7 +271,7 @@
         <div class="muted small" style="margin:-6px 0 10px;">Se aplica a todos los tratamientos. Cada uno puede sobrescribirlo al agregarlo.</div>
         <div class="grid2">
           <div class="form-group"><label class="lbl">Método de pago</label><select id="metodo"></select></div>
-          <div class="form-group"><label class="lbl">Terminal / cuenta</label><select id="terminal"></select></div>
+          <div class="form-group" id="grupoTerminal"><label class="lbl">Terminal / cuenta</label><select id="terminal"></select></div>
         </div>
         <div class="grid2">
           <div class="form-group"><label class="lbl">Moneda</label><select id="moneda"></select></div>
@@ -318,7 +318,7 @@
         <div id="boxPagoTrat" class="hidden">
           <div class="grid3">
             <div class="form-group"><label class="lbl">Método</label><select id="metodoTrat"></select></div>
-            <div class="form-group"><label class="lbl">Terminal</label><select id="terminalTrat"></select></div>
+            <div class="form-group" id="grupoTerminalTrat"><label class="lbl">Terminal</label><select id="terminalTrat"></select></div>
             <div class="form-group"><label class="lbl">Moneda</label><select id="monedaTrat"></select></div>
           </div>
         </div>
@@ -408,12 +408,23 @@ let TRAT_ELEGIDO = null; // tratamiento seleccionado de la lista (estricto)
 let COT_ELEGIDA = null; // cotización aceptada elegida (cirugía)
 let COTIZACIONES_PAC = []; // cotizaciones aceptadas del paciente actual
 let ESTADO_ACTUAL = null; // último estado de cuenta cargado (para compartir)
+let DATOS_BLOQUEADOS = false; // datos generales bloqueados (abono de una cotización con pagos previos)
 let BUSCANDO = null;
 let ENVIANDO = false;
 
 const $ = id => document.getElementById(id);
 const show = id => $(id).classList.remove('hidden');
 const hide = id => $(id).classList.add('hidden');
+
+// Efectivo: no se pregunta terminal; se fija a "Efectivo (No aplica)" y se oculta el campo
+function aplicaEfectivoTerminal() {
+  if ($('metodo').value === 'Efectivo') { $('terminal').value = 'Efectivo (No aplica)'; hide('grupoTerminal'); }
+  else { show('grupoTerminal'); }
+}
+function aplicaEfectivoTerminalTrat() {
+  if ($('metodoTrat').value === 'Efectivo') { $('terminalTrat').value = 'Efectivo (No aplica)'; hide('grupoTerminalTrat'); }
+  else { show('grupoTerminalTrat'); }
+}
 
 function decodeJWT(token) {
   try {
@@ -523,6 +534,9 @@ function initApp() {
   $('pagoDistinto').addEventListener('change', function() {
     if (this.checked) show('boxPagoTrat'); else hide('boxPagoTrat');
   });
+  // Efectivo: no se pregunta terminal (es obvio); se fija a "Efectivo (No aplica)"
+  $('metodo').addEventListener('change', aplicaEfectivoTerminal);
+  $('metodoTrat').addEventListener('change', aplicaEfectivoTerminalTrat);
   // Al cambiar de línea, se limpia el tratamiento elegido (el filtro cambia)
   $('linea').addEventListener('change', function() {
     $('tratamiento').value = '';
@@ -534,9 +548,14 @@ function initApp() {
     if (this.value === 'Cirugía') {
       // Cirugía: se cobra contra una cotización aceptada, no por búsqueda de tratamiento
       hide('grupoTratamiento');
+      // El único cirujano es el Dr. Miguel Soto → médico fijo y no editable
+      $('medico').value = 'Dr. Miguel Soto';
+      $('medico').disabled = true;
       cargarCotizaciones();
     } else {
       show('grupoTratamiento');
+      DATOS_BLOQUEADOS = false;
+      ['medico', 'operativo', 'prospecta', 'cierra'].forEach(id => { $(id).disabled = false; });
       hide('cotizacionBox');
       hide('cotizacionSaldo');
       hide('cotizacionAcciones');
@@ -902,6 +921,9 @@ function nuevoCobro() {
   $('descuentoMonto').disabled = false;
   $('pagoDistinto').disabled = false;
   ['linea', 'metodo', 'terminal', 'moneda', 'metodoTrat', 'terminalTrat', 'monedaTrat', 'medico', 'operativo', 'prospecta', 'cierra', 'condicion', 'factura'].forEach(id => { if ($(id)) $(id).selectedIndex = 0; });
+  ['medico', 'operativo', 'prospecta', 'cierra'].forEach(id => { $(id).disabled = false; });
+  DATOS_BLOQUEADOS = false;
+  show('grupoTerminal'); show('grupoTerminalTrat');
   $('pagoDistinto').checked = false;
   limpiarErrores();
   hide('pacSel'); hide('boxTC'); hide('previewMXN'); hide('msg'); hide('boxNumFactura'); hide('boxPagoTrat'); hide('histBox'); hide('boxAutoriza');
@@ -1367,6 +1389,20 @@ function onElegirCotizacion() {
   sBox.classList.remove('hidden');
   show('cotizacionAcciones');
   $('liquidarSplit').checked = false;
+  // Si la cotización ya tiene pagos previos, reusar y bloquear los datos generales del primer cobro
+  if (c.tienePagos && c.datosGenerales) {
+    const dg = c.datosGenerales;
+    if (dg.medico) $('medico').value = dg.medico;
+    if (dg.operativo) $('operativo').value = dg.operativo;
+    if (dg.prospecta) $('prospecta').value = dg.prospecta;
+    if (dg.cierra) $('cierra').value = dg.cierra;
+    ['medico', 'operativo', 'prospecta', 'cierra'].forEach(id => { $(id).disabled = true; });
+    DATOS_BLOQUEADOS = true;
+  } else {
+    DATOS_BLOQUEADOS = false;
+    // Primer cobro: operativo/prospecta/cierra editables (médico queda fijo por ser cirugía)
+    ['operativo', 'prospecta', 'cierra'].forEach(id => { $(id).disabled = false; });
+  }
   // El "tratamiento" pasa a ser la etiqueta del paquete; el monto lo captura recepción (abono)
   const label = (c.procedimientos || []).join(' + ') || ('Paquete ' + c.cotizacionId);
   $('tratamiento').value = label;
