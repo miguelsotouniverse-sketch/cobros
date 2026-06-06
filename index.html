@@ -257,16 +257,6 @@
           </div>
         </div>
 
-        <div class="section-label serif">Datos generales</div>
-        <div class="grid2">
-          <div class="form-group"><label class="lbl">Médico titular</label><select id="medico"></select></div>
-          <div class="form-group"><label class="lbl">Operativo / quién atendió</label><select id="operativo"></select></div>
-        </div>
-        <div class="grid2">
-          <div class="form-group"><label class="lbl">Prospecta</label><select id="prospecta"></select></div>
-          <div class="form-group"><label class="lbl">Cierra</label><select id="cierra"></select></div>
-        </div>
-
         <div class="section-label serif">Método de pago general</div>
         <div class="muted small" style="margin:-6px 0 10px;">Se aplica a todos los tratamientos. Cada uno puede sobrescribirlo al agregarlo.</div>
         <div class="grid2">
@@ -329,6 +319,16 @@
         <div id="carritoVacio" class="muted small" style="margin-bottom:10px;">Aún no has agregado tratamientos.</div>
         <div id="carritoLista"></div>
         <div id="carritoTotal" class="hidden" style="text-align:right;font-weight:600;font-size:1.05rem;margin:10px 0;"></div>
+
+        <div class="section-label serif">Datos generales</div>
+        <div class="grid2">
+          <div class="form-group"><label class="lbl">Médico titular</label><select id="medico"></select></div>
+          <div class="form-group"><label class="lbl">Operativo / quién atendió</label><select id="operativo"></select></div>
+        </div>
+        <div class="grid2">
+          <div class="form-group"><label class="lbl">Prospecta</label><select id="prospecta"></select></div>
+          <div class="form-group"><label class="lbl">Cierra</label><select id="cierra"></select></div>
+        </div>
 
         <div class="section-label serif">Facturación</div>
         <div class="grid2">
@@ -1265,7 +1265,9 @@ async function abrirFacturas() {
     }
     return '<div class="fac-item" id="fac-' + escapeHtml(f.folio) + '">' +
       '<div class="fac-head">' +
-        '<div><b>' + escapeHtml(f.folio) + '</b> · ' + escapeHtml(f.paciente) + '</div>' +
+        '<div><b>' + escapeHtml(f.folio) + '</b> · ' + escapeHtml(f.paciente) +
+          (f.perteneceA ? ' · <span style="font-weight:600;color:' + (f.perteneceA === 'Renasté' ? '#8e7456' : '#5a7a4e') + '">' + escapeHtml(f.perteneceA) + '</span>' : '') +
+        '</div>' +
         '<div class="muted small">' + escapeHtml(f.fecha) + ' · ' + money(f.montoMXN) + ' MXN' + (badge ? ' · ' + badge : '') + '</div>' +
       '</div>' +
       '<div class="grid2" style="margin-top:10px;">' +
