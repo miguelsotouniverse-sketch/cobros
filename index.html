@@ -548,9 +548,9 @@ function initApp() {
     if (this.value === 'Cirugía') {
       // Cirugía: se cobra contra una cotización aceptada, no por búsqueda de tratamiento
       hide('grupoTratamiento');
-      // El único cirujano es el Dr. Miguel Soto → médico fijo y no editable
-      $('medico').value = 'Dr. Miguel Soto';
-      $('medico').disabled = true;
+      // En cirugía, médico titular y operativo son SIEMPRE el Dr. Miguel Soto (no cambia)
+      $('medico').value = 'Dr. Miguel Soto'; $('medico').disabled = true;
+      $('operativo').value = 'Dr. Miguel Soto'; $('operativo').disabled = true;
       cargarCotizaciones();
     } else {
       show('grupoTratamiento');
@@ -564,12 +564,17 @@ function initApp() {
   });
   $('cotizacionSel').addEventListener('change', onElegirCotizacion);
   $('liquidarSplit').addEventListener('change', function() {
-    // Al liquidar, sugiere el saldo completo; si se desmarca (abono), limpia para capturar el parcial
     if (this.checked && COT_ELEGIDA) {
+      // Liquidación: el monto es el saldo completo y la condición es "Liquidación" (no se pregunta)
       const saldo = (COT_ELEGIDA.saldoPendiente != null) ? COT_ELEGIDA.saldoPendiente : COT_ELEGIDA.granTotal;
       $('monto').value = saldo;
+      $('condicion').value = 'Liquidación';
+      $('condicion').disabled = true;
     } else {
+      // Anticipo/abono: recepción captura el monto; condición vuelve a "Anticipo"
       $('monto').value = '';
+      $('condicion').disabled = false;
+      if ($('condicion').value === 'Liquidación') $('condicion').value = 'Anticipo';
     }
   });
   // Al corregir un campo marcado en rojo, se le quita el resaltado
@@ -922,6 +927,7 @@ function nuevoCobro() {
   $('pagoDistinto').disabled = false;
   ['linea', 'metodo', 'terminal', 'moneda', 'metodoTrat', 'terminalTrat', 'monedaTrat', 'medico', 'operativo', 'prospecta', 'cierra', 'condicion', 'factura'].forEach(id => { if ($(id)) $(id).selectedIndex = 0; });
   ['medico', 'operativo', 'prospecta', 'cierra'].forEach(id => { $(id).disabled = false; });
+  $('condicion').disabled = false;
   DATOS_BLOQUEADOS = false;
   show('grupoTerminal'); show('grupoTerminalTrat');
   $('pagoDistinto').checked = false;
@@ -1075,6 +1081,7 @@ function agregarTratamiento() {
       const liquidaTodo = montoVal >= (saldoPend - 0.01);
       const quiereSplit = $('liquidarSplit').checked || liquidaTodo;
       if (quiereSplit) {
+        $('condicion').value = 'Liquidación';
         return mostrarModalSplitCirugia(terminalTmp);
       }
       // Abono / pago a una sola terminal: un cobro con el monto capturado (el backend lo aplica y reconcilia al final)
@@ -1233,6 +1240,7 @@ function limpiarTratamiento() {
   COT_ELEGIDA = null;
   $('linea').selectedIndex = 0;
   $('condicion').selectedIndex = 0;
+  $('condicion').disabled = false;
   $('pagoDistinto').checked = false;
   hide('boxPagoTrat');
   hide('boxAutoriza');
@@ -1395,6 +1403,9 @@ function onElegirCotizacion() {
   sBox.classList.remove('hidden');
   show('cotizacionAcciones');
   $('liquidarSplit').checked = false;
+  // Por default es un abono: condición "Anticipo" y monto a capturar (no se sugiere el total)
+  $('condicion').value = 'Anticipo';
+  $('condicion').disabled = false;
   // Si la cotización ya tiene pagos previos, reusar y bloquear los datos generales del primer cobro
   if (c.tienePagos && c.datosGenerales) {
     const dg = c.datosGenerales;
