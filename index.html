@@ -1548,31 +1548,51 @@ function mostrarModalSplitCirugia(terminalDrSugerida) {
   if (!COT_ELEGIDA) {
     return showMsg('Selecciona la cotización aceptada antes de cobrar la cirugía.');
   }
-  // Se liquida el SALDO pendiente (no el total), por si ya hubo abonos previos
-  const honorarios = (COT_ELEGIDA.honPendiente != null) ? COT_ELEGIDA.honPendiente : COT_ELEGIDA.honorariosTotal;
-  const bucketClinica = (COT_ELEGIDA.bucketPendiente != null) ? COT_ELEGIDA.bucketPendiente
-    : ((COT_ELEGIDA.bucketClinica != null) ? COT_ELEGIDA.bucketClinica : (COT_ELEGIDA.granTotal - COT_ELEGIDA.honorariosTotal));
-  const label = (COT_ELEGIDA.procedimientos || []).join(' + ') || ('Paquete ' + COT_ELEGIDA.cotizacionId);
-  $('splitTrat').textContent = label + ' (' + COT_ELEGIDA.cotizacionId + ')';
-  $('splitHon').textContent = '$' + Number(honorarios).toLocaleString('es-MX', { minimumFractionDigits: 2 });
-  $('splitBck').textContent = '$' + Number(bucketClinica).toLocaleString('es-MX', { minimumFractionDigits: 2 });
-  // ¿El método de pago general es Efectivo? Si sí, el split usa terminales de efectivo
-  // por defecto (así el IVA se libera al Dr automáticamente). Igual se puede cambiar.
+  const c = COT_ELEGIDA;
+  const money = n => '$' + Number(n).toLocaleString('es-MX', { minimumFractionDigits: 2 });
+  const label = (c.procedimientos || []).join(' + ') || ('Paquete ' + c.cotizacionId);
+  $('splitTrat').textContent = label + ' (' + c.cotizacionId + ')';
+
   const usaPropioSplit = $('pagoDistinto').checked;
   const metodoSplit = usaPropioSplit ? $('metodoTrat').value : $('metodo').value;
   const esEfectivoSplit = (metodoSplit === 'Efectivo');
-  // Terminal del Dr (honorarios): electrónicas del Dr + Efectivo Dr.
-  const terminalesDr = ['Multiva MS', 'Multiva Amex', 'Mercado Pago', 'HSBC', 'Multiva', 'Santander', 'PayPal', 'Zelle', 'Efectivo Dr.'];
+  const saldo = (c.saldoPendiente != null) ? c.saldoPendiente : c.granTotal;
+
+  let montoDr, montoRen, terminalesDr, terminalesRen, defaultDr, defaultRen;
+  if (esEfectivoSplit) {
+    // EFECTIVO: cada caja recibe su monto REAL (sin deuda). Caja Dr = lo que de verdad le toca al Dr.
+    const cajaDrTotal = (c.drRecibeEfectivo != null) ? c.drRecibeEfectivo : (c.honorariosTotal || 0);
+    const recDr = c.recibidoDr || 0;
+    montoDr = Math.max(0, Math.min(saldo, Math.round((cajaDrTotal - recDr) * 100) / 100));
+    montoRen = Math.round((saldo - montoDr) * 100) / 100;
+    $('splitLblDr').textContent = 'Caja Dr. Miguel Soto';
+    $('splitLblRen').textContent = 'Caja Renasté';
+    terminalesDr = ['Efectivo Dr.'];
+    terminalesRen = ['Efectivo Renasté'];
+    defaultDr = 'Efectivo Dr.';
+    defaultRen = 'Efectivo Renasté';
+  } else {
+    // ELECTRÓNICO: honorarios → Dr, bucket → Renasté (se reconcilia con deuda a fin de mes)
+    montoDr = (c.honPendiente != null) ? c.honPendiente : c.honorariosTotal;
+    montoRen = (c.bucketPendiente != null) ? c.bucketPendiente : ((c.bucketClinica != null) ? c.bucketClinica : (c.granTotal - c.honorariosTotal));
+    $('splitLblDr').textContent = 'Honorarios Dr.';
+    $('splitLblRen').textContent = 'Bucket Clínica';
+    terminalesDr = ['Multiva MS', 'Multiva Amex', 'Mercado Pago', 'HSBC', 'Multiva', 'Santander', 'PayPal', 'Zelle', 'Efectivo Dr.'];
+    terminalesRen = ['Multiva Renasté', 'Cuenta Renasté', 'Efectivo Renasté'];
+    defaultDr = (terminalDrSugerida && terminalesDr.indexOf(terminalDrSugerida) >= 0) ? terminalDrSugerida : 'Multiva MS';
+    defaultRen = 'Multiva Renasté';
+  }
+
+  $('splitHon').textContent = money(montoDr);
+  $('splitBck').textContent = money(montoRen);
   const selDr = $('splitTermDr');
   selDr.innerHTML = terminalesDr.map(function(t){ return '<option value="'+t+'">'+t+'</option>'; }).join('');
-  selDr.value = esEfectivoSplit ? 'Efectivo Dr.'
-    : ((terminalDrSugerida && terminalesDr.indexOf(terminalDrSugerida) >= 0) ? terminalDrSugerida : 'Multiva MS');
-  // Terminal Renasté (bucket): electrónicas Renasté + Efectivo Renasté
-  const terminalesRen = ['Multiva Renasté', 'Cuenta Renasté', 'Efectivo Renasté'];
+  selDr.value = defaultDr;
   const selRen = $('splitTermRen');
   selRen.innerHTML = terminalesRen.map(function(t){ return '<option value="'+t+'">'+t+'</option>'; }).join('');
-  selRen.value = esEfectivoSplit ? 'Efectivo Renasté' : 'Multiva Renasté';
-  _splitCirugiaPending = { honorarios: honorarios, bucketClinica: bucketClinica, cotizacionId: COT_ELEGIDA.cotizacionId, label: label, granTotal: COT_ELEGIDA.granTotal };
+  selRen.value = defaultRen;
+
+  _splitCirugiaPending = { honorarios: montoDr, bucketClinica: montoRen, cotizacionId: c.cotizacionId, label: label, granTotal: c.granTotal };
   show('modalSplitCirugia');
 }
 
@@ -1642,12 +1662,12 @@ function confirmarSplitCirugia() {
       Tratamiento: <b id="splitTrat">—</b>
     </p>
     <div class="split-row">
-      <span class="lbl-r">Honorarios Dr.</span>
+      <span class="lbl-r" id="splitLblDr">Honorarios Dr.</span>
       <span class="amt" id="splitHon">$0</span>
       <select id="splitTermDr"></select>
     </div>
     <div class="split-row">
-      <span class="lbl-r">Bucket Clínica</span>
+      <span class="lbl-r" id="splitLblRen">Bucket Clínica</span>
       <span class="amt" id="splitBck">$0</span>
       <select id="splitTermRen"></select>
     </div>
