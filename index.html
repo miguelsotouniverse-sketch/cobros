@@ -348,6 +348,9 @@
       <div class="exito-banner noprint">✓ Cobro registrado exitosamente</div>
       <h1 class="view-title serif noprint">Cobro registrado</h1>
       <div class="view-subtitle noprint">Entrega este comprobante al paciente</div>
+      <div class="card noprint hidden" id="repartoCard" style="margin-bottom:16px;">
+        <div id="repartoArea"></div>
+      </div>
       <div class="card">
         <div id="reciboArea"></div>
         <div class="acciones noprint">
@@ -758,6 +761,7 @@ async function enviarCobro() {
   b.disabled = false; b.textContent = 'Registrar cobro';
   if (!r.ok) return showMsg(r.error || 'No se pudo registrar.');
   pintarReciboMultiple(r.recibos, comun, r.estadosCuenta || {});
+  pintarReparto(r.reparto || []);
   // Bloquear "Nuevo cobro" hasta que se imprima este recibo
   const bn = $('btnNuevoCobro');
   if (bn) bn.disabled = true;
@@ -841,6 +845,41 @@ function pintarReciboMultiple(recibos, comun, estadosCuenta) {
 }
 function row(k, v) { return '<tr><td class="k">' + k + '</td><td>' + escapeHtml(String(v == null ? '' : v)) + '</td></tr>'; }
 
+// Distribución del dinero: a qué caja/terminal va cada peso (uso interno de recepción)
+function pintarReparto(reparto) {
+  const card = $('repartoCard');
+  const area = $('repartoArea');
+  if (!reparto || !reparto.length) { card.classList.add('hidden'); area.innerHTML = ''; return; }
+  const money = n => '$' + Number(n).toLocaleString('es-MX', { minimumFractionDigits: 2 });
+  const cajaEfectivo = t => t === 'Efectivo Dr.' ? 'Caja Dr. Miguel Soto' : (t === 'Efectivo Renasté' ? 'Caja Renasté' : t);
+  const entLabel = e => e === 'Dr' ? 'Dr. Miguel Soto' : (e === 'Clinica' ? 'Renasté' : '');
+  const efectivos = reparto.filter(r => r.esEfectivo);
+  const otros = reparto.filter(r => !r.esEfectivo);
+  let html = '<div class="section-label serif" style="margin-top:0;">Distribución del dinero</div>' +
+    '<div class="muted small" style="margin:-6px 0 12px;">Cómo queda repartido este cobro (uso interno, no aparece en el recibo del paciente).</div>';
+  if (efectivos.length) {
+    html += '<div style="background:#fbf3e6;border:1px solid #e8d9bc;border-radius:6px;padding:14px 16px;margin-bottom:12px;">' +
+      '<div style="font-weight:600;margin-bottom:8px;">💵 Reparte el efectivo en las cajas:</div>';
+    efectivos.forEach(r => {
+      html += '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #ecdfc4;"><span>' +
+        escapeHtml(cajaEfectivo(r.terminal)) + '</span><b>' + money(r.monto) + '</b></div>';
+    });
+    html += '</div>';
+  }
+  if (otros.length) {
+    html += '<div style="border:1px solid var(--border-soft);border-radius:6px;padding:14px 16px;">' +
+      '<div style="font-weight:600;margin-bottom:8px;">Cobros electrónicos:</div>';
+    otros.forEach(r => {
+      const meta = entLabel(r.entidad) ? ' · ' + entLabel(r.entidad) : '';
+      html += '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border-soft);"><span>' +
+        escapeHtml(r.terminal) + meta + '</span><b>' + money(r.monto) + '</b></div>';
+    });
+    html += '</div>';
+  }
+  area.innerHTML = html;
+  card.classList.remove('hidden');
+}
+
 function imprimir() {
   window.print();
   // Tras enviar a impresión, se habilita continuar al siguiente cobro
@@ -870,6 +909,7 @@ function nuevoCobro() {
   show('grupoTratamiento');
   $('liquidarSplit').checked = false;
   $('cotizacionInfo').textContent = ''; $('cotizacionSel').innerHTML = '';
+  hide('repartoCard');
   hide('view-estado'); hide('view-recibo'); show('view-cobro');
   window.scrollTo(0, 0);
 }
