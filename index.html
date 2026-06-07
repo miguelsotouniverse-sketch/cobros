@@ -159,13 +159,22 @@
       .card { padding: 20px; }
     }
 
-    /* IMPRESIÓN: solo el recibo */
+    /* Tablas de reportes / conciliación */
+    .rep-doc { font-size: 0.92rem; }
+    .rep-head { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid var(--border); padding-bottom: 10px; margin-bottom: 6px; gap: 12px; }
+    .rep-tbl { width: 100%; border-collapse: collapse; }
+    .rep-tbl th, .rep-tbl td { padding: 6px 8px; border-bottom: 1px solid var(--border-soft); text-align: left; vertical-align: top; }
+    .rep-tbl thead th { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); border-bottom: 1px solid var(--border); }
+    .rep-tbl tbody tr:last-child td { border-bottom: 0; }
+
+    /* IMPRESIÓN: solo el contenido visible (recibo / estado / reporte) */
     @media print {
       body { background: #fff; }
-      .topbar, .hero, .view-title, .view-subtitle, .acciones, .noprint { display: none !important; }
+      .topbar, .hero, .view-title, .view-subtitle, .acciones, .noprint, .rep-tabs { display: none !important; }
       main { margin: 0; max-width: 100%; }
       .card { border: 0; box-shadow: none; padding: 0; }
       .recibo { border: 0; padding: 0; }
+      .rep-tbl th, .rep-tbl td { padding: 4px 6px; }
     }
 .modal-overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,0.55);
@@ -212,6 +221,8 @@
     <span class="email" id="topbar-email">—</span>
     <span style="opacity: 0.4;">·</span>
     <button class="salir hidden" id="btn-facturas" onclick="abrirFacturas()">facturas pendientes</button>
+    <button class="salir hidden" id="btn-reportes" onclick="abrirReportes()">reportes</button>
+    <button class="salir hidden" id="btn-conciliacion" onclick="abrirConciliacion()">conciliación</button>
     <button class="salir hidden" id="btn-volver-cobro" onclick="volverACobro()">← cobros</button>
     <button class="salir" id="btn-salir">salir</button>
   </header>
@@ -351,6 +362,15 @@
       <div class="card noprint hidden" id="repartoCard" style="margin-bottom:16px;">
         <div id="repartoArea"></div>
       </div>
+      <div class="card noprint hidden" id="comprobantesCard" style="margin-bottom:16px;">
+        <div style="font-weight:600;margin-bottom:4px;">📎 Comprobantes de pago</div>
+        <div class="muted small" id="comprobantesNota" style="margin-bottom:10px;">Adjunta la evidencia de cada pago. Quedan ligados al folio para la conciliación.</div>
+        <div id="comprobantesArea"></div>
+        <div class="acciones" style="margin-top:6px;">
+          <button class="btn btn-primary" id="btnSubirComprobantes" style="width:auto;margin-top:0;" onclick="subirComprobantes()">Subir comprobantes</button>
+        </div>
+        <div class="muted small" id="comprobantesMsg" style="margin-top:8px;"></div>
+      </div>
       <div class="card">
         <div id="reciboArea"></div>
         <div class="acciones noprint">
@@ -382,6 +402,57 @@
           <button class="btn btn-primary" style="width:auto;margin-top:0;" onclick="volverDeEstado()">← Volver al cobro</button>
         </div>
         <div id="estadoMsg" class="muted small noprint" style="text-align:center;margin-top:8px;"></div>
+      </div>
+    </section>
+
+    <!-- REPORTES -->
+    <section id="view-reportes" class="hidden">
+      <h1 class="view-title serif noprint">Reportes</h1>
+      <div class="view-subtitle noprint">Detalle diario, semanal y mensual · desglose por entidad, caja y método</div>
+      <div class="card noprint">
+        <div class="rep-tabs" style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+          <button class="btn btn-secondary rep-tab" data-rep="dia" style="width:auto;margin-top:0;" onclick="repTab('dia')">Diario</button>
+          <button class="btn btn-secondary rep-tab" data-rep="semana" style="width:auto;margin-top:0;" onclick="repTab('semana')">Semanal</button>
+          <button class="btn btn-secondary rep-tab" data-rep="mes" style="width:auto;margin-top:0;" onclick="repTab('mes')">Mensual</button>
+        </div>
+        <div id="repCtrlDia" class="grid2">
+          <div class="form-group"><label class="lbl">Fecha</label><input type="date" id="repFecha"></div>
+        </div>
+        <div id="repCtrlRango" class="grid2 hidden">
+          <div class="form-group"><label class="lbl">Desde</label><input type="date" id="repDesde"></div>
+          <div class="form-group"><label class="lbl">Hasta</label><input type="date" id="repHasta"></div>
+        </div>
+        <div class="acciones" style="margin-top:4px;">
+          <button class="btn btn-primary" id="btnGenerarRep" style="width:auto;margin-top:0;" onclick="generarReporte()">Generar reporte</button>
+          <button class="btn btn-secondary" style="width:auto;margin-top:0;" onclick="imprimirReporte()">🖨 Imprimir / PDF</button>
+        </div>
+        <div class="muted small" id="repMsg" style="margin-top:8px;"></div>
+      </div>
+      <div class="card" id="repResultadoCard" style="display:none;">
+        <div id="repResultado"></div>
+      </div>
+    </section>
+
+    <!-- CONCILIACIÓN -->
+    <section id="view-conciliacion" class="hidden">
+      <h1 class="view-title serif noprint">Conciliación bancaria</h1>
+      <div class="view-subtitle noprint">Compara lo registrado vs. el reporte del banco · adjunta el PDF del banco</div>
+      <div class="card noprint">
+        <div class="grid2">
+          <div class="form-group"><label class="lbl">Fecha a conciliar</label><input type="date" id="concFecha"></div>
+          <div class="form-group"><label class="lbl">PDF del banco (del día siguiente)</label><input type="file" id="concPdf" accept="application/pdf,image/*"></div>
+        </div>
+        <div class="acciones" style="margin-top:4px;">
+          <button class="btn btn-primary" id="btnCargarConc" style="width:auto;margin-top:0;" onclick="cargarConciliacion()">Cargar día</button>
+        </div>
+        <div class="muted small" id="concMsg" style="margin-top:8px;"></div>
+      </div>
+      <div class="card" id="concResultadoCard" style="display:none;">
+        <div id="concResultado"></div>
+        <div class="acciones noprint" style="margin-top:10px;">
+          <button class="btn btn-primary" id="btnGuardarConc" style="width:auto;margin-top:0;" onclick="guardarConciliacion()">Guardar conciliación</button>
+          <button class="btn btn-secondary" style="width:auto;margin-top:0;" onclick="imprimirReporte()">🖨 Imprimir / PDF</button>
+        </div>
       </div>
     </section>
   </main>
@@ -614,6 +685,8 @@ function initApp() {
   const rol = catalogos.usuario && catalogos.usuario.rol ? catalogos.usuario.rol : 'cobros';
   if (rol === 'admin' || rol === 'facturacion' || rol === 'facturación') {
     show('btn-facturas');
+    show('btn-reportes');
+    show('btn-conciliacion');
   }
 }
 
@@ -786,11 +859,9 @@ async function enviarCobro() {
   if (!r.ok) return showMsg(r.error || 'No se pudo registrar.');
   pintarReciboMultiple(r.recibos, comun, r.estadosCuenta || {});
   pintarReparto(r.reparto || [], r.desglosesReales || {});
-  // Bloquear "Nuevo cobro" hasta que se imprima este recibo
-  const bn = $('btnNuevoCobro');
-  if (bn) bn.disabled = true;
-  const av = $('avisoImprimir');
-  if (av) av.textContent = 'Debes imprimir el recibo antes de continuar al siguiente cobro.';
+  RECIBO_IMPRESO = false;
+  renderComprobantes(r.recibos || [], cobros, comun);
+  _gateNuevoCobro();
   hide('view-cobro');
   show('view-recibo');
   window.scrollTo(0, 0);
@@ -941,11 +1012,8 @@ function pintarReparto(reparto, desglosesReales) {
 
 function imprimir() {
   window.print();
-  // Tras enviar a impresión, se habilita continuar al siguiente cobro
-  const b = $('btnNuevoCobro');
-  if (b) b.disabled = false;
-  const aviso = $('avisoImprimir');
-  if (aviso) aviso.textContent = 'Recibo enviado a impresión. Ya puedes continuar.';
+  RECIBO_IMPRESO = true;
+  _gateNuevoCobro();
 }
 function nuevoCobro() {
   PAC = null;
@@ -972,7 +1040,7 @@ function nuevoCobro() {
   show('grupoTratamiento');
   $('liquidarSplit').checked = false;
   $('cotizacionInfo').textContent = ''; $('cotizacionSel').innerHTML = '';
-  hide('repartoCard');
+  hide('repartoCard'); hide('comprobantesCard');
   hide('view-estado'); hide('view-recibo'); show('view-cobro');
   window.scrollTo(0, 0);
 }
@@ -1327,8 +1395,38 @@ async function abrirFacturas() {
 }
 
 function volverACobro() {
-  hide('view-facturas'); hide('view-recibo'); show('view-cobro');
-  hide('btn-volver-cobro'); show('btn-facturas');
+  hide('view-facturas'); hide('view-recibo'); hide('view-reportes'); hide('view-conciliacion'); hide('view-estado');
+  show('view-cobro');
+  hide('btn-volver-cobro');
+  const rol = catalogos.usuario && catalogos.usuario.rol ? catalogos.usuario.rol : 'cobros';
+  if (rol === 'admin' || rol === 'facturacion' || rol === 'facturación') {
+    show('btn-facturas'); show('btn-reportes'); show('btn-conciliacion');
+  }
+  window.scrollTo(0, 0);
+}
+
+function _ocultarBotonesNav() {
+  hide('btn-facturas'); hide('btn-reportes'); hide('btn-conciliacion');
+  show('btn-volver-cobro');
+}
+
+function abrirReportes() {
+  hide('view-cobro'); hide('view-recibo'); hide('view-facturas'); hide('view-estado'); hide('view-conciliacion');
+  show('view-reportes'); _ocultarBotonesNav();
+  const hoy = new Date().toISOString().slice(0, 10);
+  if (!$('repFecha').value) $('repFecha').value = hoy;
+  repTab('dia');
+  window.scrollTo(0, 0);
+}
+
+function abrirConciliacion() {
+  hide('view-cobro'); hide('view-recibo'); hide('view-facturas'); hide('view-estado'); hide('view-reportes');
+  show('view-conciliacion'); _ocultarBotonesNav();
+  // por defecto, conciliar el día de ayer (el banco reporta al día siguiente)
+  const ayer = new Date(); ayer.setDate(ayer.getDate() - 1);
+  if (!$('concFecha').value) $('concFecha').value = ayer.toISOString().slice(0, 10);
+  $('concResultadoCard').style.display = 'none';
+  $('concMsg').textContent = '';
   window.scrollTo(0, 0);
 }
 
@@ -1653,6 +1751,313 @@ function confirmarSplitCirugia() {
   limpiarTratamiento();
   hide('modalSplitCirugia');
   _splitCirugiaPending = null;
+}
+
+// ============================================================
+// COMPROBANTES (evidencia al cobrar)
+// ============================================================
+const fmt$ = n => '$' + Number(n || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+// ⬇⬇ INTERRUPTOR: en pruebas = false (opcional). En producción cámbialo a true para EXIGIR comprobantes. ⬇⬇
+const COMPROBANTES_OBLIGATORIOS = false;
+
+let COMP_ITEMS = [];
+let RECIBO_IMPRESO = false;
+let COMPROBANTES_OK = true;
+
+// Habilita "Nuevo cobro" solo si ya se imprimió y (en producción) ya se subieron comprobantes
+function _gateNuevoCobro() {
+  const b = $('btnNuevoCobro'); const av = $('avisoImprimir');
+  if (!b) return;
+  const faltaImpr = !RECIBO_IMPRESO;
+  const faltaComp = COMPROBANTES_OBLIGATORIOS && !COMPROBANTES_OK;
+  b.disabled = faltaImpr || faltaComp;
+  if (av) {
+    if (faltaImpr) av.textContent = 'Debes imprimir el recibo antes de continuar al siguiente cobro.';
+    else if (faltaComp) av.textContent = 'Sube los comprobantes de pago antes de continuar.';
+    else av.textContent = 'Listo. Ya puedes continuar al siguiente cobro.';
+  }
+}
+
+function _tipoComprobante(metodo) {
+  const m = String(metodo || '').toLowerCase();
+  if (/efectivo/.test(m)) return { tipo: 'efectivo', label: 'Recibo de efectivo firmado por Dr. Miguel Soto', icon: '🧾' };
+  if (/transfer|spei|dep[oó]sito|ficha/.test(m)) return { tipo: 'transferencia', label: 'Comprobante de transferencia / ficha de depósito', icon: '🏦' };
+  if (/tarjeta|tpv|terminal|pos|cr[eé]dito|d[eé]bito|amex|visa|master/.test(m)) return { tipo: 'voucher', label: 'Voucher de la terminal bancaria', icon: '💳' };
+  return { tipo: 'comprobante', label: 'Comprobante de pago', icon: '📎' };
+}
+
+function renderComprobantes(recibos, cobros, comun) {
+  COMP_ITEMS = [];
+  const cont = $('comprobantesArea');
+  let html = '';
+  recibos.forEach((rec, i) => {
+    const c = cobros[i] || {};
+    const monto = Number(rec.montoMXN || 0);
+    const metodo = rec.metodo || c.metodo || '';
+    if (monto <= 0 || /cortes/i.test(metodo) || /cortes/i.test(c.condicion || '')) return; // cortesías sin comprobante
+    const t = _tipoComprobante(metodo);
+    const terminal = c.terminal || '';
+    const idx = COMP_ITEMS.length;
+    COMP_ITEMS.push({
+      inputId: 'comp-file-' + idx,
+      folioREC: rec.folio || '', folioME: rec.folioME || '',
+      pacienteId: comun.idPaciente || '', pacienteNombre: comun.nombrePaciente || '',
+      tipo: t.tipo, metodo: metodo, terminal: terminal, montoMXN: monto,
+      fecha: rec.fecha || ''
+    });
+    html +=
+      '<div class="comp-row" style="border:1px solid var(--border-soft);border-radius:6px;padding:10px 12px;margin-bottom:8px;">' +
+        '<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;">' +
+          '<div><b>' + t.icon + ' ' + escapeHtml(t.label) + '</b>' +
+            (terminal ? ' <span class="muted small">(' + escapeHtml(terminal) + ')</span>' : '') +
+            '<div class="muted small">' + escapeHtml((c.linea || '') + (c.tratamiento ? ' · ' + c.tratamiento : '')) + ' · ' + escapeHtml(rec.folio || '') + '</div>' +
+          '</div>' +
+          '<div style="font-weight:600;">' + fmt$(monto) + '</div>' +
+        '</div>' +
+        '<input type="file" id="comp-file-' + idx + '" accept="image/*,application/pdf" capture="environment" style="margin-top:8px;">' +
+      '</div>';
+  });
+  if (!COMP_ITEMS.length) { hide('comprobantesCard'); COMPROBANTES_OK = true; _gateNuevoCobro(); return; }
+  cont.innerHTML = html;
+  COMPROBANTES_OK = false; // hay comprobantes por subir
+  const nota = $('comprobantesNota');
+  if (nota) nota.textContent = COMPROBANTES_OBLIGATORIOS
+    ? 'Obligatorio: adjunta la evidencia de cada pago antes de continuar.'
+    : 'Opcional durante pruebas — puedes continuar sin subir foto. En producción será obligatorio.';
+  $('comprobantesMsg').textContent = '';
+  $('btnSubirComprobantes').disabled = false;
+  $('btnSubirComprobantes').textContent = 'Subir comprobantes';
+  show('comprobantesCard');
+  _gateNuevoCobro();
+}
+
+function _fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const res = String(reader.result || '');
+      const comma = res.indexOf(',');
+      resolve({ base64: comma >= 0 ? res.slice(comma + 1) : res, mime: file.type || 'application/octet-stream', name: file.name || 'comprobante' });
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function subirComprobantes() {
+  const btn = $('btnSubirComprobantes');
+  const msg = $('comprobantesMsg');
+  const evidencias = [];
+  for (const it of COMP_ITEMS) {
+    const inp = $(it.inputId);
+    if (inp && inp.files && inp.files[0]) {
+      const f = await _fileToBase64(inp.files[0]);
+      evidencias.push({
+        fecha: it.fecha, folioREC: it.folioREC, folioME: it.folioME,
+        pacienteId: it.pacienteId, pacienteNombre: it.pacienteNombre,
+        tipo: it.tipo, metodo: it.metodo, terminal: it.terminal, montoMXN: it.montoMXN,
+        fileBase64: f.base64, fileName: (it.tipo + '_' + it.folioREC + '_' + f.name).replace(/\s+/g, '_'), mimeType: f.mime
+      });
+    }
+  }
+  if (!evidencias.length) { msg.style.color = 'var(--error)'; msg.textContent = 'Selecciona al menos una foto antes de subir.'; return; }
+  btn.disabled = true; btn.textContent = 'Subiendo…';
+  const r = await callAPI('subirEvidencia', { evidencias });
+  if (!r.ok) { btn.disabled = false; btn.textContent = 'Subir comprobantes'; msg.style.color = 'var(--error)'; msg.textContent = r.error || 'No se pudieron subir.'; return; }
+  msg.style.color = 'var(--success)';
+  msg.textContent = '✓ ' + r.guardados + ' comprobante(s) guardado(s) en Drive y ligado(s) al folio.';
+  btn.textContent = '✓ Comprobantes subidos';
+  COMPROBANTES_OK = true;
+  _gateNuevoCobro();
+}
+
+// ============================================================
+// REPORTES
+// ============================================================
+let REP_MODO = 'dia';
+function repTab(modo) {
+  REP_MODO = modo;
+  document.querySelectorAll('.rep-tab').forEach(b => {
+    b.classList.toggle('btn-primary', b.dataset.rep === modo);
+    b.classList.toggle('btn-secondary', b.dataset.rep !== modo);
+  });
+  if (modo === 'dia') { show('repCtrlDia'); hide('repCtrlRango'); }
+  else {
+    hide('repCtrlDia'); show('repCtrlRango');
+    const hoy = new Date();
+    if (modo === 'semana') {
+      const d = new Date(hoy); const dow = (d.getDay() + 6) % 7; // lunes=0
+      const lun = new Date(d); lun.setDate(d.getDate() - dow);
+      const dom = new Date(lun); dom.setDate(lun.getDate() + 6);
+      $('repDesde').value = lun.toISOString().slice(0, 10);
+      $('repHasta').value = dom.toISOString().slice(0, 10);
+    } else { // mes
+      const ini = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+      const fin = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+      $('repDesde').value = ini.toISOString().slice(0, 10);
+      $('repHasta').value = fin.toISOString().slice(0, 10);
+    }
+  }
+}
+
+function _isoToDMY(iso) { if (!iso) return ''; const p = iso.split('-'); return p[2] + '/' + p[1] + '/' + p[0]; }
+
+async function generarReporte() {
+  const msg = $('repMsg'); msg.style.color = ''; msg.textContent = 'Generando…';
+  let r;
+  if (REP_MODO === 'dia') {
+    const f = $('repFecha').value; if (!f) { msg.textContent = 'Elige una fecha.'; return; }
+    r = await callAPI('reporteDia', { fecha: _isoToDMY(f) });
+  } else {
+    const d = $('repDesde').value, h = $('repHasta').value;
+    if (!d || !h) { msg.textContent = 'Elige el rango de fechas.'; return; }
+    r = await callAPI('reporteRango', { desde: _isoToDMY(d), hasta: _isoToDMY(h), tipo: REP_MODO });
+  }
+  if (!r.ok) { msg.style.color = 'var(--error)'; msg.textContent = r.error || 'Error al generar.'; return; }
+  msg.textContent = '';
+  $('repResultadoCard').style.display = 'block';
+  $('repResultado').innerHTML = renderReporteHTML(r);
+  window.scrollTo(0, document.getElementById('repResultadoCard').offsetTop - 20);
+}
+
+function _tablaSimple(titulo, arr) {
+  if (!arr || !arr.length) return '';
+  let body = arr.map(x => '<tr><td>' + escapeHtml(x.nombre) + '</td><td style="text-align:right;">' + fmt$(x.monto) + '</td></tr>').join('');
+  return '<div style="margin-top:14px;"><div style="font-weight:600;margin-bottom:4px;">' + titulo + '</div>' +
+    '<table class="rep-tbl"><tbody>' + body + '</tbody></table></div>';
+}
+
+function renderReporteHTML(r) {
+  const esDia = r.tipo === 'dia';
+  const titulo = esDia ? ('Reporte del día · ' + escapeHtml(r.fecha))
+    : ((r.tipo === 'semana' ? 'Reporte semanal · ' : r.tipo === 'mes' ? 'Reporte mensual · ' : 'Reporte · ') + escapeHtml(r.desde) + ' — ' + escapeHtml(r.hasta));
+  let h = '<div class="rep-doc">';
+  h += '<div class="rep-head"><div><div class="brand">DR. MIGUEL SOTO · RENASTÉ</div><div class="sub">' + titulo + '</div></div>' +
+       '<div style="text-align:right;"><div class="muted small">Total cobrado</div><div style="font-size:1.4rem;font-weight:700;">' + fmt$(r.total) + '</div></div></div>';
+
+  // Entidad
+  h += _tablaSimple('Por entidad fiscal', r.porEntidad);
+
+  // IVA
+  if (r.iva) {
+    h += '<div style="margin-top:14px;"><div style="font-weight:600;margin-bottom:4px;">IVA (folios liquidados: ' + (r.iva.folios || 0) + ')</div>' +
+      '<table class="rep-tbl"><tbody>' +
+        '<tr><td>IVA enterado al SAT (Renasté)</td><td style="text-align:right;">' + fmt$(r.iva.ivaSAT) + '</td></tr>' +
+        '<tr><td>IVA liberado (al Dr.)</td><td style="text-align:right;">' + fmt$(r.iva.ivaLiberado) + '</td></tr>' +
+        '<tr><td>Dr. recibe (económico)</td><td style="text-align:right;">' + fmt$(r.iva.drRecibe) + '</td></tr>' +
+        '<tr><td>Clínica neta (económico)</td><td style="text-align:right;">' + fmt$(r.iva.clinicaNeta) + '</td></tr>' +
+      '</tbody></table></div>';
+  }
+
+  // Caja / terminal
+  if (r.porTerminal && r.porTerminal.length) {
+    let body = r.porTerminal.map(t => '<tr><td>' + escapeHtml(t.terminal) + (t.esEfectivo ? ' <span class="muted small">(efectivo)</span>' : '') + '</td><td>' + escapeHtml(t.entidad || '') + '</td><td style="text-align:right;">' + fmt$(t.monto) + '</td></tr>').join('');
+    h += '<div style="margin-top:14px;"><div style="font-weight:600;margin-bottom:4px;">Por caja / terminal</div>' +
+      '<table class="rep-tbl"><thead><tr><th>Terminal</th><th>Entidad</th><th style="text-align:right;">Monto</th></tr></thead><tbody>' + body + '</tbody></table></div>';
+  }
+
+  // Método
+  h += _tablaSimple('Por método de pago', r.porMetodo);
+  // Línea
+  h += _tablaSimple('Por línea de negocio', r.porLinea);
+
+  // Por día (rango)
+  if (r.porDia && r.porDia.length) {
+    let body = r.porDia.map(d => '<tr><td>' + escapeHtml(d.fecha) + '</td><td style="text-align:right;">' + fmt$(d.dr) + '</td><td style="text-align:right;">' + fmt$(d.renaste) + '</td><td style="text-align:right;font-weight:600;">' + fmt$(d.total) + '</td></tr>').join('');
+    h += '<div style="margin-top:14px;"><div style="font-weight:600;margin-bottom:4px;">Desglose por día</div>' +
+      '<table class="rep-tbl"><thead><tr><th>Fecha</th><th style="text-align:right;">Dr.</th><th style="text-align:right;">Renasté</th><th style="text-align:right;">Total</th></tr></thead><tbody>' + body + '</tbody></table></div>';
+  }
+
+  // Evidencia / conciliación (día)
+  if (esDia && r.evidencia) {
+    const ev = r.evidencia;
+    const tipos = Object.keys(ev.porTipo || {}).map(k => k + ': ' + ev.porTipo[k]).join(' · ') || 'sin comprobantes';
+    h += '<div style="margin-top:14px;"><div style="font-weight:600;margin-bottom:4px;">Comprobantes capturados</div>' +
+      '<div class="muted small">' + ev.total + ' archivo(s) · ' + escapeHtml(tipos) + '</div></div>';
+  }
+
+  // Detalle de movimientos (día)
+  if (esDia && r.movimientos && r.movimientos.length) {
+    let body = r.movimientos.map(m => '<tr><td>' + escapeHtml(m.paciente) + '</td><td>' + escapeHtml((m.linea || '') + (m.tratamiento ? ' · ' + m.tratamiento : '')) + '</td><td>' + escapeHtml(m.metodo) + '</td><td>' + escapeHtml(m.terminal) + '</td><td>' + escapeHtml(m.entidad) + '</td><td style="text-align:right;">' + fmt$(m.monto) + '</td></tr>').join('');
+    h += '<div style="margin-top:14px;"><div style="font-weight:600;margin-bottom:4px;">Detalle de movimientos del día</div>' +
+      '<table class="rep-tbl"><thead><tr><th>Paciente</th><th>Concepto</th><th>Método</th><th>Terminal</th><th>Entidad</th><th style="text-align:right;">Monto</th></tr></thead><tbody>' + body + '</tbody></table></div>';
+  }
+
+  h += '<div class="pie" style="margin-top:16px;">Generado ' + new Date().toLocaleString('es-MX') + ' · Sistema de Cobros</div>';
+  h += '</div>';
+  return h;
+}
+
+function imprimirReporte() { window.print(); }
+
+// ============================================================
+// CONCILIACIÓN
+// ============================================================
+let CONC_DATA = null;
+async function cargarConciliacion() {
+  const f = $('concFecha').value;
+  const msg = $('concMsg'); msg.style.color = '';
+  if (!f) { msg.textContent = 'Elige una fecha.'; return; }
+  msg.textContent = 'Cargando…';
+  const r = await callAPI('conciliacionDia', { fecha: _isoToDMY(f) });
+  if (!r.ok) { msg.style.color = 'var(--error)'; msg.textContent = r.error || 'Error.'; return; }
+  CONC_DATA = r; msg.textContent = '';
+  $('concResultadoCard').style.display = 'block';
+  renderConciliacion(r);
+  window.scrollTo(0, document.getElementById('concResultadoCard').offsetTop - 20);
+}
+
+function renderConciliacion(r) {
+  let body = (r.terminales || []).map((t, i) => {
+    const dif = t.diferencia;
+    const color = (dif == null) ? 'var(--muted)' : (Math.abs(dif) < 0.5 ? 'var(--success)' : 'var(--error)');
+    const estadoTxt = (dif == null) ? '—' : (Math.abs(dif) < 0.5 ? '✓ Cuadrado' : '⚠ ' + fmt$(dif));
+    return '<tr>' +
+      '<td>' + escapeHtml(t.terminal) + (t.esEfectivo ? ' <span class="muted small">(efectivo)</span>' : '') + '</td>' +
+      '<td>' + escapeHtml(t.entidad || '') + '</td>' +
+      '<td style="text-align:right;">' + fmt$(t.totalSistema) + '</td>' +
+      '<td style="text-align:right;"><input type="number" step="0.01" class="conc-banco" data-term="' + escapeHtml(t.terminal) + '" data-sis="' + t.totalSistema + '" value="' + (t.totalBanco == null ? '' : t.totalBanco) + '" style="width:120px;text-align:right;" oninput="recalcConcFila(this)"></td>' +
+      '<td style="text-align:right;color:' + color + ';font-weight:600;" id="conc-dif-' + i + '">' + estadoTxt + '</td>' +
+    '</tr>';
+  }).join('');
+  const pdfLink = r.bankPdfUrl ? '<div class="muted small" style="margin-top:8px;">📄 PDF del banco guardado: <a href="' + escapeHtml(r.bankPdfUrl) + '" target="_blank">abrir</a></div>' : '';
+  $('concResultado').innerHTML =
+    '<div class="rep-doc"><div class="rep-head"><div><div class="brand">Conciliación bancaria</div><div class="sub">' + escapeHtml(r.fecha) + '</div></div></div>' +
+    '<table class="rep-tbl" style="margin-top:12px;"><thead><tr><th>Terminal / caja</th><th>Entidad</th><th style="text-align:right;">Sistema</th><th style="text-align:right;">Banco</th><th style="text-align:right;">Estado</th></tr></thead>' +
+    '<tbody>' + (body || '<tr><td colspan="5" class="muted small">Sin movimientos ese día.</td></tr>') + '</tbody></table>' +
+    pdfLink + '</div>';
+}
+
+function recalcConcFila(inp) {
+  const sis = Number(inp.dataset.sis || 0);
+  const tr = inp.closest('tr');
+  const cell = tr.querySelector('td:last-child');
+  if (inp.value === '') { cell.textContent = '—'; cell.style.color = 'var(--muted)'; return; }
+  const dif = Math.round((Number(inp.value) - sis) * 100) / 100;
+  if (Math.abs(dif) < 0.5) { cell.textContent = '✓ Cuadrado'; cell.style.color = 'var(--success)'; }
+  else { cell.textContent = '⚠ ' + fmt$(dif); cell.style.color = 'var(--error)'; }
+}
+
+async function guardarConciliacion() {
+  const btn = $('btnGuardarConc'); const msg = $('concMsg'); msg.style.color = '';
+  const f = $('concFecha').value;
+  const terminales = Array.from(document.querySelectorAll('.conc-banco')).map(inp => ({
+    terminal: inp.dataset.term,
+    totalBanco: inp.value === '' ? '' : Number(inp.value)
+  }));
+  const payload = { fecha: _isoToDMY(f), terminales };
+  const pdfInp = $('concPdf');
+  if (pdfInp && pdfInp.files && pdfInp.files[0]) {
+    const fb = await _fileToBase64(pdfInp.files[0]);
+    payload.bankPdfBase64 = fb.base64; payload.bankPdfMime = fb.mime; payload.bankPdfName = fb.name;
+  }
+  btn.disabled = true; btn.textContent = 'Guardando…';
+  const r = await callAPI('guardarConciliacion', payload);
+  btn.disabled = false; btn.textContent = 'Guardar conciliación';
+  if (!r.ok) { msg.style.color = 'var(--error)'; msg.textContent = r.error || 'Error al guardar.'; return; }
+  CONC_DATA = r; renderConciliacion(r);
+  msg.style.color = 'var(--success)'; msg.textContent = '✓ Conciliación guardada.';
 }
 </script>
 <div id="modalSplitCirugia" class="modal-overlay hidden">
