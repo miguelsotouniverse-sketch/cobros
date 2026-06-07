@@ -223,6 +223,7 @@
     <button class="salir hidden" id="btn-facturas" onclick="abrirFacturas()">facturas pendientes</button>
     <button class="salir hidden" id="btn-reportes" onclick="abrirReportes()">reportes</button>
     <button class="salir hidden" id="btn-conciliacion" onclick="abrirConciliacion()">conciliación</button>
+    <button class="salir hidden" id="btn-corte" onclick="abrirCorte()">corte de caja</button>
     <button class="salir hidden" id="btn-volver-cobro" onclick="volverACobro()">← cobros</button>
     <button class="salir" id="btn-salir">salir</button>
   </header>
@@ -453,6 +454,32 @@
           <button class="btn btn-primary" id="btnGuardarConc" style="width:auto;margin-top:0;" onclick="guardarConciliacion()">Guardar conciliación</button>
           <button class="btn btn-secondary" style="width:auto;margin-top:0;" onclick="imprimirReporte()">🖨 Imprimir / PDF</button>
         </div>
+      </div>
+    </section>
+
+    <!-- CORTE DE EFECTIVO -->
+    <section id="view-corte" class="hidden">
+      <h1 class="view-title serif noprint">Corte de caja (efectivo)</h1>
+      <div class="view-subtitle noprint">Todo el efectivo pendiente desde el último corte · firma de contraentrega del Dr.</div>
+      <div class="card">
+        <div id="corteArea"></div>
+      </div>
+      <div class="card noprint" id="corteFirmaBox" style="display:none;">
+        <div style="font-weight:600;margin-bottom:4px;">✍️ Recibo de corte firmado por el Dr. Miguel Soto</div>
+        <div class="muted small" style="margin-bottom:10px;">Sube o toma foto del recibo firmado. Al registrar, este efectivo queda sellado en el corte.</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <input type="file" id="corteFirmaFile" accept="image/*,application/pdf" capture="environment" onchange="document.getElementById('corte-cam-firma').textContent='';">
+          <button type="button" class="btn btn-secondary" style="width:auto;margin-top:0;padding:6px 12px;" onclick="tomarFotoFirma()">📷 Tomar foto</button>
+          <span class="muted small" id="corte-cam-firma"></span>
+        </div>
+        <div class="form-group" style="margin-top:10px;"><label class="lbl">Observaciones (opcional)</label><input type="text" id="corteObs" placeholder="Notas del corte"></div>
+        <div class="acciones" style="margin-top:4px;">
+          <button class="btn btn-primary" id="btnRegistrarCorte" style="width:auto;margin-top:0;" onclick="registrarCorte()">Registrar corte</button>
+        </div>
+        <div class="muted small" id="corteMsg" style="margin-top:8px;"></div>
+      </div>
+      <div class="card noprint" id="corteSinPend" style="display:none;">
+        <div class="muted">No hay efectivo pendiente de corte. 🎉</div>
       </div>
     </section>
   </main>
@@ -687,6 +714,7 @@ function initApp() {
     show('btn-facturas');
     show('btn-reportes');
     show('btn-conciliacion');
+    show('btn-corte');
   }
 }
 
@@ -1395,23 +1423,23 @@ async function abrirFacturas() {
 }
 
 function volverACobro() {
-  hide('view-facturas'); hide('view-recibo'); hide('view-reportes'); hide('view-conciliacion'); hide('view-estado');
+  hide('view-facturas'); hide('view-recibo'); hide('view-reportes'); hide('view-conciliacion'); hide('view-corte'); hide('view-estado');
   show('view-cobro');
   hide('btn-volver-cobro');
   const rol = catalogos.usuario && catalogos.usuario.rol ? catalogos.usuario.rol : 'cobros';
   if (rol === 'admin' || rol === 'facturacion' || rol === 'facturación') {
-    show('btn-facturas'); show('btn-reportes'); show('btn-conciliacion');
+    show('btn-facturas'); show('btn-reportes'); show('btn-conciliacion'); show('btn-corte');
   }
   window.scrollTo(0, 0);
 }
 
 function _ocultarBotonesNav() {
-  hide('btn-facturas'); hide('btn-reportes'); hide('btn-conciliacion');
+  hide('btn-facturas'); hide('btn-reportes'); hide('btn-conciliacion'); hide('btn-corte');
   show('btn-volver-cobro');
 }
 
 function abrirReportes() {
-  hide('view-cobro'); hide('view-recibo'); hide('view-facturas'); hide('view-estado'); hide('view-conciliacion');
+  hide('view-cobro'); hide('view-recibo'); hide('view-facturas'); hide('view-estado'); hide('view-conciliacion'); hide('view-corte');
   show('view-reportes'); _ocultarBotonesNav();
   const hoy = new Date().toISOString().slice(0, 10);
   if (!$('repFecha').value) $('repFecha').value = hoy;
@@ -1420,7 +1448,7 @@ function abrirReportes() {
 }
 
 function abrirConciliacion() {
-  hide('view-cobro'); hide('view-recibo'); hide('view-facturas'); hide('view-estado'); hide('view-reportes');
+  hide('view-cobro'); hide('view-recibo'); hide('view-facturas'); hide('view-estado'); hide('view-reportes'); hide('view-corte');
   show('view-conciliacion'); _ocultarBotonesNav();
   // por defecto, conciliar el día de ayer (el banco reporta al día siguiente)
   const ayer = new Date(); ayer.setDate(ayer.getDate() - 1);
@@ -1796,6 +1824,7 @@ function renderComprobantes(recibos, cobros, comun) {
     const monto = Number(rec.montoMXN || 0);
     const metodo = rec.metodo || c.metodo || '';
     if (monto <= 0 || /cortes/i.test(metodo) || /cortes/i.test(c.condicion || '')) return; // cortesías sin comprobante
+    if (/efectivo/i.test(metodo)) return; // EFECTIVO no lleva comprobante por cobro: va al corte de caja
     const t = _tipoComprobante(metodo);
     const terminal = c.terminal || '';
     const idx = COMP_ITEMS.length;
@@ -1804,7 +1833,7 @@ function renderComprobantes(recibos, cobros, comun) {
       folioREC: rec.folio || '', folioME: rec.folioME || '',
       pacienteId: comun.idPaciente || '', pacienteNombre: comun.nombrePaciente || '',
       tipo: t.tipo, metodo: metodo, terminal: terminal, montoMXN: monto,
-      fecha: rec.fecha || ''
+      fecha: rec.fecha || '', capturedFile: null
     });
     html +=
       '<div class="comp-row" style="border:1px solid var(--border-soft);border-radius:6px;padding:10px 12px;margin-bottom:8px;">' +
@@ -1815,7 +1844,11 @@ function renderComprobantes(recibos, cobros, comun) {
           '</div>' +
           '<div style="font-weight:600;">' + fmt$(monto) + '</div>' +
         '</div>' +
-        '<input type="file" id="comp-file-' + idx + '" accept="image/*,application/pdf" capture="environment" style="margin-top:8px;">' +
+        '<div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap;">' +
+          '<input type="file" id="comp-file-' + idx + '" accept="image/*,application/pdf" capture="environment" onchange="document.getElementById(\'comp-cam-' + idx + '\').textContent=\'\';">' +
+          '<button type="button" class="btn btn-secondary" style="width:auto;margin-top:0;padding:6px 12px;" onclick="tomarFotoComprobante(' + idx + ')">📷 Tomar foto</button>' +
+          '<span class="muted small" id="comp-cam-' + idx + '"></span>' +
+        '</div>' +
       '</div>';
   });
   if (!COMP_ITEMS.length) { hide('comprobantesCard'); COMPROBANTES_OK = true; _gateNuevoCobro(); return; }
@@ -1823,8 +1856,8 @@ function renderComprobantes(recibos, cobros, comun) {
   COMPROBANTES_OK = false; // hay comprobantes por subir
   const nota = $('comprobantesNota');
   if (nota) nota.textContent = COMPROBANTES_OBLIGATORIOS
-    ? 'Obligatorio: adjunta la evidencia de cada pago antes de continuar.'
-    : 'Opcional durante pruebas — puedes continuar sin subir foto. En producción será obligatorio.';
+    ? 'Obligatorio: adjunta la evidencia de cada pago antes de continuar. (El efectivo se concilia en el Corte de caja.)'
+    : 'Opcional durante pruebas — puedes continuar sin subir foto. El efectivo va al Corte de caja, no aquí.';
   $('comprobantesMsg').textContent = '';
   $('btnSubirComprobantes').disabled = false;
   $('btnSubirComprobantes').textContent = 'Subir comprobantes';
@@ -1851,8 +1884,9 @@ async function subirComprobantes() {
   const evidencias = [];
   for (const it of COMP_ITEMS) {
     const inp = $(it.inputId);
-    if (inp && inp.files && inp.files[0]) {
-      const f = await _fileToBase64(inp.files[0]);
+    const file = (it.capturedFile) || (inp && inp.files && inp.files[0]) || null;
+    if (file) {
+      const f = await _fileToBase64(file);
       evidencias.push({
         fecha: it.fecha, folioREC: it.folioREC, folioME: it.folioME,
         pacienteId: it.pacienteId, pacienteNombre: it.pacienteNombre,
@@ -1870,6 +1904,120 @@ async function subirComprobantes() {
   btn.textContent = '✓ Comprobantes subidos';
   COMPROBANTES_OK = true;
   _gateNuevoCobro();
+}
+
+// ============================================================
+// CÁMARA WEB (getUserMedia)
+// ============================================================
+let _camStream = null, _camCallback = null;
+async function openCamera(titulo, onCapture) {
+  _camCallback = onCapture;
+  $('camTitulo').textContent = titulo || 'Tomar foto';
+  $('camMsg').textContent = ''; $('camMsg').style.color = '';
+  show('modalCamara');
+  try {
+    _camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+    $('camVideo').srcObject = _camStream;
+  } catch (e) {
+    $('camMsg').style.color = 'var(--error)';
+    $('camMsg').textContent = 'No se pudo abrir la cámara (' + (e.message || e) + '). Cierra y usa "Subir archivo".';
+  }
+}
+function capturarFoto() {
+  const v = $('camVideo'), cv = $('camCanvas');
+  if (!v.videoWidth) { $('camMsg').textContent = 'La cámara aún no está lista, espera un momento…'; return; }
+  cv.width = v.videoWidth; cv.height = v.videoHeight;
+  cv.getContext('2d').drawImage(v, 0, 0);
+  cv.toBlob(blob => {
+    const file = new File([blob], 'foto_' + Date.now() + '.jpg', { type: 'image/jpeg' });
+    const cb = _camCallback;
+    cerrarCamara();
+    if (cb) cb(file);
+  }, 'image/jpeg', 0.85);
+}
+function cerrarCamara() {
+  if (_camStream) { _camStream.getTracks().forEach(t => t.stop()); _camStream = null; }
+  $('camVideo').srcObject = null;
+  _camCallback = null;
+  hide('modalCamara');
+}
+function tomarFotoComprobante(idx) {
+  openCamera('Foto del voucher', (file) => {
+    COMP_ITEMS[idx].capturedFile = file;
+    const inp = $(COMP_ITEMS[idx].inputId); if (inp) inp.value = '';
+    const lbl = $('comp-cam-' + idx);
+    if (lbl) { lbl.style.color = 'var(--success)'; lbl.textContent = '✓ Foto capturada'; }
+  });
+}
+
+// ============================================================
+// CORTE DE EFECTIVO (firma de contraentrega del Dr.)
+// ============================================================
+let CORTE_FIRMA_FILE = null;
+function abrirCorte() {
+  hide('view-cobro'); hide('view-recibo'); hide('view-facturas'); hide('view-estado'); hide('view-reportes'); hide('view-conciliacion');
+  show('view-corte'); _ocultarBotonesNav();
+  cargarCorte();
+  window.scrollTo(0, 0);
+}
+async function cargarCorte() {
+  const cont = $('corteArea');
+  cont.innerHTML = '<div class="muted small">Cargando efectivo pendiente…</div>';
+  CORTE_FIRMA_FILE = null;
+  const fin = $('corteFirmaFile'); if (fin) fin.value = '';
+  const fc = $('corte-cam-firma'); if (fc) fc.textContent = '';
+  const [r, h] = await Promise.all([callAPI('cortePendiente'), callAPI('historialCortes')]);
+  if (!r.ok) { cont.innerHTML = '<div class="alert alert-error">' + escapeHtml(r.error || 'Error') + '</div>'; return; }
+  renderCortePendiente(r, (h && h.ok) ? h.cortes : []);
+}
+function renderCortePendiente(r, cortes) {
+  const hayPend = r.numMov > 0;
+  let porDia = '';
+  if (r.porDia && r.porDia.length) {
+    const body = r.porDia.map(d => '<tr><td>' + escapeHtml(d.fecha) + '</td><td style="text-align:right;">' + fmt$(d.dr) + '</td><td style="text-align:right;">' + fmt$(d.renaste) + '</td><td style="text-align:right;font-weight:600;">' + fmt$(d.total) + '</td></tr>').join('');
+    porDia = '<table class="rep-tbl" style="margin-top:10px;"><thead><tr><th>Día</th><th style="text-align:right;">Caja Dr.</th><th style="text-align:right;">Caja Renasté</th><th style="text-align:right;">Total</th></tr></thead><tbody>' + body + '</tbody></table>';
+  }
+  let hist = '';
+  if (cortes && cortes.length) {
+    const hb = cortes.map(c => '<tr><td>' + escapeHtml(c.fecha) + '</td><td>' + escapeHtml(c.periodoDesde + ' → ' + c.periodoHasta) + '</td><td style="text-align:right;">' + fmt$(c.totalDr) + '</td><td style="text-align:right;">' + fmt$(c.totalRenaste) + '</td><td style="text-align:right;font-weight:600;">' + fmt$(c.total) + '</td><td>' + (c.firmaUrl ? '<a href="' + escapeHtml(c.firmaUrl) + '" target="_blank">firma</a>' : '—') + '</td></tr>').join('');
+    hist = '<div style="margin-top:20px;"><div style="font-weight:600;margin-bottom:4px;">Cortes anteriores</div><table class="rep-tbl"><thead><tr><th>Fecha corte</th><th>Periodo</th><th style="text-align:right;">Dr.</th><th style="text-align:right;">Renasté</th><th style="text-align:right;">Total</th><th>Firma</th></tr></thead><tbody>' + hb + '</tbody></table></div>';
+  }
+  $('corteArea').innerHTML =
+    '<div class="rep-doc"><div class="rep-head"><div><div class="brand">Corte de efectivo</div><div class="sub">Efectivo pendiente desde el último corte</div></div>' +
+      '<div style="text-align:right;"><div class="muted small">Total a entregar</div><div style="font-size:1.4rem;font-weight:700;">' + fmt$(r.total) + '</div></div></div>' +
+    '<table class="rep-tbl" style="margin-top:12px;"><tbody>' +
+      '<tr><td>Caja Dr. Miguel Soto</td><td style="text-align:right;font-weight:600;">' + fmt$(r.totalDr) + '</td></tr>' +
+      '<tr><td>Caja Renasté</td><td style="text-align:right;font-weight:600;">' + fmt$(r.totalRenaste) + '</td></tr>' +
+      '<tr><td>Movimientos</td><td style="text-align:right;">' + r.numMov + '</td></tr>' +
+    '</tbody></table>' + porDia + hist + '</div>';
+  $('corteFirmaBox').style.display = hayPend ? 'block' : 'none';
+  $('corteSinPend').style.display = hayPend ? 'none' : 'block';
+}
+function tomarFotoFirma() {
+  openCamera('Foto del recibo de corte firmado', (file) => {
+    CORTE_FIRMA_FILE = file;
+    const inp = $('corteFirmaFile'); if (inp) inp.value = '';
+    const lbl = $('corte-cam-firma');
+    if (lbl) { lbl.style.color = 'var(--success)'; lbl.textContent = '✓ Foto capturada'; }
+  });
+}
+async function registrarCorte() {
+  const btn = $('btnRegistrarCorte'); const msg = $('corteMsg'); msg.style.color = '';
+  const inp = $('corteFirmaFile');
+  const file = CORTE_FIRMA_FILE || (inp && inp.files && inp.files[0]) || null;
+  if (!file) { msg.style.color = 'var(--error)'; msg.textContent = 'Falta la foto del recibo firmado por el Dr.'; return; }
+  const f = await _fileToBase64(file);
+  btn.disabled = true; btn.textContent = 'Registrando corte…';
+  const r = await callAPI('registrarCorte', {
+    firmaBase64: f.base64, firmaMime: f.mime, firmaName: ('corte_firma_' + f.name).replace(/\s+/g, '_'),
+    observaciones: $('corteObs').value.trim()
+  });
+  btn.disabled = false; btn.textContent = 'Registrar corte';
+  if (!r.ok) { msg.style.color = 'var(--error)'; msg.textContent = r.error || 'No se pudo registrar el corte.'; return; }
+  msg.style.color = 'var(--success)';
+  msg.textContent = '✓ Corte ' + r.corteId + ' registrado · ' + fmt$(r.total) + ' (Dr. ' + fmt$(r.totalDr) + ' · Renasté ' + fmt$(r.totalRenaste) + ')';
+  $('corteObs').value = '';
+  cargarCorte();
 }
 
 // ============================================================
@@ -2079,6 +2227,20 @@ async function guardarConciliacion() {
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="cancelarSplitCirugia()">Cancelar</button>
       <button class="btn btn-primary" onclick="confirmarSplitCirugia()">Agregar ambos al carrito</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CÁMARA WEB -->
+<div id="modalCamara" class="modal-overlay hidden">
+  <div class="modal-card" style="max-width:520px;">
+    <h3 class="serif" id="camTitulo">Tomar foto</h3>
+    <video id="camVideo" autoplay playsinline style="width:100%;border-radius:6px;background:#000;max-height:60vh;"></video>
+    <canvas id="camCanvas" class="hidden"></canvas>
+    <div class="muted small" id="camMsg" style="margin-top:6px;"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="cerrarCamara()">Cancelar</button>
+      <button class="btn btn-primary" id="camBtnCapturar" onclick="capturarFoto()">📷 Capturar</button>
     </div>
   </div>
 </div>
