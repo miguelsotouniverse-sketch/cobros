@@ -1076,8 +1076,12 @@ function nuevoCobro() {
 // ============================================================
 // BUSCADOR INTELIGENTE DE TRATAMIENTOS + PRECIO/DESCUENTO
 // ============================================================
+// Normaliza para búsqueda: minúsculas y SIN acentos (á→a, ñ→n, etc.)
+function _normTxt(s) {
+  return String(s == null ? '' : s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
 function onBuscarTrat() {
-  const q = $('tratamiento').value.trim().toLowerCase();
+  const q = _normTxt($('tratamiento').value.trim());
   const lineaSel = $('linea').value;
   tratSel = -1;
   TRAT_ELEGIDO = null; // al escribir, se invalida cualquier selección previa
@@ -1090,10 +1094,10 @@ function onBuscarTrat() {
   $('tratResultados').innerHTML = '<div class="trat-buscando">Buscando…</div>';
   show('tratResultados');
   const palabras = q.split(/\s+/);
-  // Solo tratamientos de la línea seleccionada
+  // Solo tratamientos de la línea seleccionada (búsqueda sin acentos)
   const matches = PRECIOS.filter(p => {
     if (p.linea !== lineaSel) return false;
-    const nl = (p.nombre + ' ' + (p.categoria || '')).toLowerCase();
+    const nl = _normTxt(p.nombre + ' ' + (p.categoria || ''));
     return palabras.every(w => nl.indexOf(w) !== -1);
   }).slice(0, 30);
   if (!matches.length) {
@@ -2130,6 +2134,23 @@ function renderReporteHTML(r) {
     let body = r.movimientos.map(m => '<tr><td>' + escapeHtml(m.paciente) + '</td><td>' + escapeHtml((m.linea || '') + (m.tratamiento ? ' · ' + m.tratamiento : '')) + '</td><td>' + escapeHtml(m.metodo) + '</td><td>' + escapeHtml(m.terminal) + '</td><td>' + escapeHtml(m.entidad) + '</td><td style="text-align:right;">' + fmt$(m.monto) + '</td></tr>').join('');
     h += '<div style="margin-top:14px;"><div style="font-weight:600;margin-bottom:4px;">Detalle de movimientos del día</div>' +
       '<table class="rep-tbl"><thead><tr><th>Paciente</th><th>Concepto</th><th>Método</th><th>Terminal</th><th>Entidad</th><th style="text-align:right;">Monto</th></tr></thead><tbody>' + body + '</tbody></table></div>';
+  }
+
+  // Diagnóstico cuando el total sale en $0 (para depurar fechas)
+  if (esDia && Number(r.total) === 0 && r.diag) {
+    const d = r.diag;
+    const filas = (d.ultimas || []).map(u =>
+      '<tr><td>' + escapeHtml(u.folio) + '</td><td>' + escapeHtml(u.fechaRaw) + '</td><td>' + escapeHtml(u.key || '—') + '</td><td>' + (u.coincide ? '✓' : '✗') + '</td><td>' + escapeHtml(u.linea) + '</td><td style="text-align:right;">' + fmt$(u.monto) + '</td></tr>'
+    ).join('');
+    h += '<div style="margin-top:16px;padding:10px;border:1px dashed var(--border);border-radius:6px;background:var(--bg-soft);">' +
+      '<div style="font-weight:600;">🔎 Diagnóstico (total $0)</div>' +
+      '<div class="muted small">Clave buscada: <b>' + escapeHtml(d.targetKey || '—') + '</b> · Zona horaria hoja: ' + escapeHtml(d.tz || '—') + ' · Filas totales: ' + (d.totalFilas || 0) + '</div>' +
+      (d.diag === undefined && !d.ultimas ? '<div class="muted small" style="color:var(--error);">El backend NO devolvió diagnóstico → no se desplegó la versión nueva del Code.gs.</div>' : '') +
+      '<table class="rep-tbl" style="margin-top:8px;"><thead><tr><th>Folio</th><th>Fecha cruda</th><th>Clave</th><th>¿Coincide?</th><th>Línea</th><th style="text-align:right;">Monto</th></tr></thead><tbody>' + filas + '</tbody></table>' +
+    '</div>';
+  } else if (esDia && Number(r.total) === 0 && !r.diag) {
+    h += '<div style="margin-top:16px;padding:10px;border:1px dashed var(--error);border-radius:6px;">' +
+      '<div class="muted small" style="color:var(--error);">⚠ El backend no devolvió diagnóstico. Esto significa que el <b>Code.gs nuevo no está desplegado</b> (Deploy → Manage deployments → ✏️ → New version).</div></div>';
   }
 
   h += '<div class="pie" style="margin-top:16px;">Generado ' + new Date().toLocaleString('es-MX') + ' · Sistema de Cobros</div>';
