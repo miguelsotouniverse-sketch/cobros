@@ -224,6 +224,7 @@
     <button class="salir hidden" id="btn-reportes" onclick="abrirReportes()">reportes</button>
     <button class="salir hidden" id="btn-conciliacion" onclick="abrirConciliacion()">conciliación</button>
     <button class="salir hidden" id="btn-corte" onclick="abrirCorte()">corte de caja</button>
+    <button class="salir hidden" id="btn-balance" onclick="abrirBalance()">balance deuda</button>
     <button class="salir hidden" id="btn-volver-cobro" onclick="volverACobro()">← cobros</button>
     <button class="salir" id="btn-salir">salir</button>
   </header>
@@ -482,6 +483,27 @@
         <div class="muted">No hay efectivo pendiente de corte. 🎉</div>
       </div>
     </section>
+
+    <!-- BALANCE DE DEUDA Dr <-> Renasté -->
+    <section id="view-balance" class="hidden">
+      <h1 class="view-title serif noprint">Balance de deuda · Dr. Miguel Soto ↔ Renasté</h1>
+      <div class="view-subtitle noprint">Neto de las deudas entre ambas entidades · saldar a cero cuando se liquide</div>
+      <div class="card">
+        <div id="balanceArea"></div>
+      </div>
+      <div class="card noprint" id="balanceSaldarBox" style="display:none;">
+        <div style="font-weight:600;margin-bottom:4px;">Saldar el balance a cero</div>
+        <div class="muted small" style="margin-bottom:10px;">Al saldar, todas las deudas pendientes se marcan como liquidadas y el balance vuelve a cero. Queda registrado en el historial.</div>
+        <div class="form-group"><label class="lbl">Nota (cómo se saldó: transferencia, efectivo, etc.)</label><input type="text" id="balanceNota" placeholder="Ej. Transferencia de Renasté al Dr. por el neto"></div>
+        <div class="acciones" style="margin-top:4px;">
+          <button class="btn btn-primary" id="btnSaldarBalance" style="width:auto;margin-top:0;" onclick="saldarBalance()">Saldar a cero</button>
+        </div>
+        <div class="muted small" id="balanceMsg" style="margin-top:8px;"></div>
+      </div>
+      <div class="card noprint" id="balanceSinDeuda" style="display:none;">
+        <div class="muted">El balance está en cero. No hay deudas pendientes entre las entidades. 🎉</div>
+      </div>
+    </section>
   </main>
 </div>
 
@@ -715,6 +737,7 @@ function initApp() {
     show('btn-reportes');
     show('btn-conciliacion');
     show('btn-corte');
+    show('btn-balance');
   }
 }
 
@@ -1427,23 +1450,23 @@ async function abrirFacturas() {
 }
 
 function volverACobro() {
-  hide('view-facturas'); hide('view-recibo'); hide('view-reportes'); hide('view-conciliacion'); hide('view-corte'); hide('view-estado');
+  hide('view-facturas'); hide('view-recibo'); hide('view-reportes'); hide('view-conciliacion'); hide('view-corte'); hide('view-balance'); hide('view-estado');
   show('view-cobro');
   hide('btn-volver-cobro');
   const rol = catalogos.usuario && catalogos.usuario.rol ? catalogos.usuario.rol : 'cobros';
   if (rol === 'admin' || rol === 'facturacion' || rol === 'facturación') {
-    show('btn-facturas'); show('btn-reportes'); show('btn-conciliacion'); show('btn-corte');
+    show('btn-facturas'); show('btn-reportes'); show('btn-conciliacion'); show('btn-corte'); show('btn-balance');
   }
   window.scrollTo(0, 0);
 }
 
 function _ocultarBotonesNav() {
-  hide('btn-facturas'); hide('btn-reportes'); hide('btn-conciliacion'); hide('btn-corte');
+  hide('btn-facturas'); hide('btn-reportes'); hide('btn-conciliacion'); hide('btn-corte'); hide('btn-balance');
   show('btn-volver-cobro');
 }
 
 function abrirReportes() {
-  hide('view-cobro'); hide('view-recibo'); hide('view-facturas'); hide('view-estado'); hide('view-conciliacion'); hide('view-corte');
+  hide('view-cobro'); hide('view-recibo'); hide('view-facturas'); hide('view-estado'); hide('view-conciliacion'); hide('view-corte'); hide('view-balance');
   show('view-reportes'); _ocultarBotonesNav();
   const hoy = new Date().toISOString().slice(0, 10);
   if (!$('repFecha').value) $('repFecha').value = hoy;
@@ -1452,7 +1475,7 @@ function abrirReportes() {
 }
 
 function abrirConciliacion() {
-  hide('view-cobro'); hide('view-recibo'); hide('view-facturas'); hide('view-estado'); hide('view-reportes'); hide('view-corte');
+  hide('view-cobro'); hide('view-recibo'); hide('view-facturas'); hide('view-estado'); hide('view-reportes'); hide('view-corte'); hide('view-balance');
   show('view-conciliacion'); _ocultarBotonesNav();
   // por defecto, conciliar el día de ayer (el banco reporta al día siguiente)
   const ayer = new Date(); ayer.setDate(ayer.getDate() - 1);
@@ -1959,10 +1982,75 @@ function tomarFotoComprobante(idx) {
 // ============================================================
 let CORTE_FIRMA_FILE = null;
 function abrirCorte() {
-  hide('view-cobro'); hide('view-recibo'); hide('view-facturas'); hide('view-estado'); hide('view-reportes'); hide('view-conciliacion');
+  hide('view-cobro'); hide('view-recibo'); hide('view-facturas'); hide('view-estado'); hide('view-reportes'); hide('view-conciliacion'); hide('view-balance');
   show('view-corte'); _ocultarBotonesNav();
   cargarCorte();
   window.scrollTo(0, 0);
+}
+
+// ============================================================
+// BALANCE DE DEUDA Dr <-> Renasté
+// ============================================================
+function abrirBalance() {
+  hide('view-cobro'); hide('view-recibo'); hide('view-facturas'); hide('view-estado'); hide('view-reportes'); hide('view-conciliacion'); hide('view-corte');
+  show('view-balance'); _ocultarBotonesNav();
+  cargarBalance();
+  window.scrollTo(0, 0);
+}
+async function cargarBalance() {
+  const cont = $('balanceArea');
+  cont.innerHTML = '<div class="muted small">Calculando balance…</div>';
+  const r = await callAPI('balanceDeuda');
+  if (!r.ok) { cont.innerHTML = '<div class="alert alert-error">' + escapeHtml(r.error || 'Error') + '</div>'; return; }
+  renderBalance(r);
+}
+function renderBalance(r) {
+  const hayDeuda = r.numPendientes > 0 && r.neto > 0.005;
+  let resumen;
+  if (!hayDeuda) {
+    resumen = '<div style="text-align:center;padding:10px 0;"><div style="font-size:1.3rem;font-weight:700;color:var(--success);">Balance en cero</div><div class="muted small">No hay deuda pendiente entre las entidades.</div></div>';
+  } else {
+    const quienDebe = r.aFavorDe === 'Dr. Miguel Soto' ? 'Renasté' : 'Dr. Miguel Soto';
+    resumen =
+      '<div style="text-align:center;padding:6px 0;">' +
+        '<div class="muted small">Resultado neto</div>' +
+        '<div style="font-size:1.5rem;font-weight:700;margin:4px 0;">' + escapeHtml(quienDebe) + ' le debe a ' + escapeHtml(r.aFavorDe) + '</div>' +
+        '<div style="font-size:2rem;font-weight:800;color:var(--brand,#8e7456);">' + fmt$(r.neto) + '</div>' +
+      '</div>';
+  }
+  let detalle = '';
+  if (r.pendientes && r.pendientes.length) {
+    const body = r.pendientes.map(d => '<tr><td>' + escapeHtml(d.fecha) + '</td><td>' + escapeHtml(d.folioId) + '</td><td>' + escapeHtml(d.deudor) + '</td><td>' + escapeHtml(d.acreedor) + '</td><td style="text-align:right;">' + fmt$(d.monto) + '</td><td class="muted small">' + escapeHtml(d.razon) + '</td></tr>').join('');
+    detalle = '<div style="margin-top:14px;"><div style="font-weight:600;margin-bottom:4px;">Deudas pendientes (' + r.numPendientes + ')</div>' +
+      '<table class="rep-tbl"><thead><tr><th>Fecha</th><th>Folio</th><th>Debe</th><th>A favor de</th><th style="text-align:right;">Monto</th><th>Motivo</th></tr></thead><tbody>' + body + '</tbody></table></div>';
+  }
+  let hist = '';
+  if (r.liquidaciones && r.liquidaciones.length) {
+    const hb = r.liquidaciones.map(l => '<tr><td>' + escapeHtml(l.fecha) + '</td><td>' + escapeHtml(l.aFavorDe) + '</td><td style="text-align:right;">' + fmt$(l.montoNeto) + '</td><td style="text-align:center;">' + l.numDeudas + '</td><td class="muted small">' + escapeHtml(l.nota || '') + '</td></tr>').join('');
+    hist = '<div style="margin-top:20px;"><div style="font-weight:600;margin-bottom:4px;">Historial de liquidaciones</div>' +
+      '<table class="rep-tbl"><thead><tr><th>Fecha</th><th>A favor de</th><th style="text-align:right;">Neto saldado</th><th style="text-align:center;">Deudas</th><th>Nota</th></tr></thead><tbody>' + hb + '</tbody></table></div>';
+  }
+  $('balanceArea').innerHTML =
+    '<div class="rep-doc"><div class="rep-head"><div><div class="brand">Balance de deuda</div><div class="sub">Dr. Miguel Soto ↔ Renasté</div></div></div>' +
+    resumen +
+    '<table class="rep-tbl" style="margin-top:12px;"><tbody>' +
+      '<tr><td>Renasté le debe al Dr. (excedentes cobrados en terminal Renasté)</td><td style="text-align:right;font-weight:600;">' + fmt$(r.debeRenasteADr) + '</td></tr>' +
+      '<tr><td>El Dr. le debe a Renasté (cobrado de más en terminal del Dr.)</td><td style="text-align:right;font-weight:600;">' + fmt$(r.debeDrARenaste) + '</td></tr>' +
+    '</tbody></table>' + detalle + hist + '</div>';
+  $('balanceSaldarBox').style.display = hayDeuda ? 'block' : 'none';
+  $('balanceSinDeuda').style.display = hayDeuda ? 'none' : 'block';
+}
+async function saldarBalance() {
+  const btn = $('btnSaldarBalance'); const msg = $('balanceMsg'); msg.style.color = '';
+  if (!confirm('¿Saldar el balance a cero? Todas las deudas pendientes quedarán marcadas como liquidadas.')) return;
+  btn.disabled = true; btn.textContent = 'Saldando…';
+  const r = await callAPI('liquidarBalance', { nota: $('balanceNota').value.trim() });
+  btn.disabled = false; btn.textContent = 'Saldar a cero';
+  if (!r.ok) { msg.style.color = 'var(--error)'; msg.textContent = r.error || 'No se pudo saldar.'; return; }
+  msg.style.color = 'var(--success)';
+  msg.textContent = '✓ Balance saldado (' + r.liqId + ') · ' + fmt$(r.neto) + ' a favor de ' + r.aFavorDe + ' · ' + r.numDeudas + ' deuda(s) liquidada(s).';
+  $('balanceNota').value = '';
+  cargarBalance();
 }
 async function cargarCorte() {
   const cont = $('corteArea');
