@@ -1021,7 +1021,7 @@ function pintarReparto(reparto, desglosesReales) {
         d.deudas.forEach(de => {
           html += '<div style="margin-top:10px;padding-top:8px;border-top:1px dashed var(--border);color:var(--accent-dark);">' +
             '↪ <b>' + escapeHtml(entLabel(de.deudor)) + '</b> le debe a <b>' + escapeHtml(entLabel(de.acreedor)) + '</b>: ' + money(de.monto) +
-            '<div class="muted small">El efectivo entró a una caja pero parte corresponde a la otra entidad; se transfiere al liquidar deudas.</div>' +
+            '<div class="muted small">' + escapeHtml(de.razon || 'Parte del cobro corresponde a la otra entidad') + '. Se salda en el Balance de deuda.</div>' +
             '</div>';
         });
       }
@@ -1775,35 +1775,39 @@ function confirmarSplitCirugia() {
   const tc = moneda === 'USD' ? parseFloat($('tc').value) : '';
   const autoriza = $('autorizaDesc').value.trim();
 
-  // Solo se agregan los renglones con saldo > 0 (si honorarios ya está cubierto, solo va el bucket, y viceversa)
-  if (Number(_splitCirugiaPending.honorarios) > 0) {
-    CARRITO.push({
-      linea: linea, tratamiento: tratamiento, area: '',
-      condicion: condicion, esCortesia: false,
-      precioLista: _splitCirugiaPending.granTotal,
-      descuentoPct: '', descuentoMonto: '',
-      autorizaDesc: autoriza || '',
-      obsDescuento: 'Honorarios (split Cirugía · ' + cotId + ')',
-      monto: _splitCirugiaPending.honorarios,
-      metodo: metodo, terminal: terminalDr,
-      moneda: moneda, tipoCambio: tc,
-      cotizacionId: cotId
-    });
-  }
+  const hon = Number(_splitCirugiaPending.honorarios) || 0;
+  const bck = Number(_splitCirugiaPending.bucketClinica) || 0;
+  const base = {
+    linea: linea, tratamiento: tratamiento, area: '',
+    condicion: condicion, esCortesia: false,
+    precioLista: _splitCirugiaPending.granTotal,
+    descuentoPct: '', descuentoMonto: '',
+    autorizaDesc: autoriza || '',
+    moneda: moneda, tipoCambio: tc, cotizacionId: cotId
+  };
 
-  if (Number(_splitCirugiaPending.bucketClinica) > 0) {
-    CARRITO.push({
-      linea: linea, tratamiento: tratamiento, area: '',
-      condicion: condicion, esCortesia: false,
-      precioLista: _splitCirugiaPending.granTotal,
-      descuentoPct: '', descuentoMonto: '',
-      autorizaDesc: autoriza || '',
-      obsDescuento: 'Bucket clínica (split Cirugía · ' + cotId + ')',
-      monto: _splitCirugiaPending.bucketClinica,
-      metodo: metodo, terminal: terminalRen,
-      moneda: moneda, tipoCambio: tc,
-      cotizacionId: cotId
-    });
+  if (hon > 0 && bck > 0 && terminalDr === terminalRen) {
+    // Mismo destino (un solo swipe/transacción) → UN SOLO cobro. El backend lo divide
+    // internamente en honorarios+bucket. Así solo pide UN voucher.
+    CARRITO.push(Object.assign({}, base, {
+      obsDescuento: 'Cirugía completa en ' + terminalDr + ' (split Cirugía · ' + cotId + ')',
+      monto: Math.round((hon + bck) * 100) / 100,
+      metodo: metodo, terminal: terminalDr
+    }));
+  } else {
+    // Destinos distintos → dos cobros (dos vouchers, son dos transacciones)
+    if (hon > 0) {
+      CARRITO.push(Object.assign({}, base, {
+        obsDescuento: 'Honorarios (split Cirugía · ' + cotId + ')',
+        monto: hon, metodo: metodo, terminal: terminalDr
+      }));
+    }
+    if (bck > 0) {
+      CARRITO.push(Object.assign({}, base, {
+        obsDescuento: 'Bucket clínica (split Cirugía · ' + cotId + ')',
+        monto: bck, metodo: metodo, terminal: terminalRen
+      }));
+    }
   }
 
   renderCarrito();
