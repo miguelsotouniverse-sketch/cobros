@@ -1730,8 +1730,12 @@ function mostrarModalSplitCirugia(terminalDrSugerida) {
     montoRen = (c.bucketPendiente != null) ? c.bucketPendiente : ((c.bucketClinica != null) ? c.bucketClinica : (c.granTotal - c.honorariosTotal));
     $('splitLblDr').textContent = 'Honorarios Dr.';
     $('splitLblRen').textContent = 'Bucket Clínica';
-    terminalesDr = ['Multiva MS', 'Multiva Amex', 'Mercado Pago', 'HSBC', 'Multiva', 'Santander', 'PayPal', 'Zelle', 'Efectivo Dr.'];
-    terminalesRen = ['Multiva Renasté', 'Cuenta Renasté', 'Efectivo Renasté'];
+    // Ambas porciones pueden cobrarse en CUALQUIER terminal (Dr o Renasté).
+    // Si el bucket lo cobra una terminal del Dr, se genera deuda Dr→Renasté y se ahorra IVA.
+    // Si los honorarios los cobra una terminal Renasté, se genera deuda Renasté→Dr.
+    const todasElec = ['Multiva MS', 'Multiva Amex', 'Mercado Pago', 'HSBC', 'Multiva', 'Santander', 'PayPal', 'Zelle', 'Multiva Renasté', 'Cuenta Renasté'];
+    terminalesDr = todasElec;
+    terminalesRen = todasElec;
     defaultDr = (terminalDrSugerida && terminalesDr.indexOf(terminalDrSugerida) >= 0) ? terminalDrSugerida : 'Multiva MS';
     defaultRen = 'Multiva Renasté';
   }
