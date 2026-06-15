@@ -544,12 +544,34 @@ const $ = id => document.getElementById(id);
 const show = id => $(id).classList.remove('hidden');
 const hide = id => $(id).classList.add('hidden');
 
+// Mapa método→terminal Renasté (línea Paquetes: el dinero es 100% de Renasté)
+const TERMINAL_RENASTE_POR_METODO = {
+  'Efectivo': 'Efectivo Renasté',
+  'TDC': 'Multiva Renasté',
+  'TDD': 'Multiva Renasté',
+  'Link de Pago': 'Multiva Renasté',
+  'Transferencia': 'Cuenta Renasté'
+};
+
 // Efectivo: no se pregunta terminal; el efectivo entra completo a la Caja Dr. Miguel Soto
 function aplicaEfectivoTerminal() {
+  // Línea Paquetes: la terminal se auto-ajusta al método, siempre dentro de Renasté
+  if ($('linea').value === 'Paquetes') {
+    const t = TERMINAL_RENASTE_POR_METODO[$('metodo').value];
+    if (t) $('terminal').value = t;
+    show('grupoTerminal');
+    return;
+  }
   if ($('metodo').value === 'Efectivo') { $('terminal').value = 'Efectivo Dr.'; hide('grupoTerminal'); }
   else { show('grupoTerminal'); }
 }
 function aplicaEfectivoTerminalTrat() {
+  if ($('linea').value === 'Paquetes') {
+    const t = TERMINAL_RENASTE_POR_METODO[$('metodoTrat').value];
+    if (t) $('terminalTrat').value = t;
+    show('grupoTerminalTrat');
+    return;
+  }
   if ($('metodoTrat').value === 'Efectivo') { $('terminalTrat').value = 'Efectivo Dr.'; hide('grupoTerminalTrat'); }
   else { show('grupoTerminalTrat'); }
 }
@@ -605,6 +627,17 @@ function aplicarAlcanceTerminalRenaste(soloRenaste) {
     fill('terminal', catalogos.terminales || []);
     fill('terminalTrat', catalogos.terminales || []);
   }
+}
+
+// Línea Paquetes: las únicas condiciones válidas son Pago parcial o Liquidación.
+function setCondicionesPaquete(activar) {
+  const sel = $('condicion');
+  if (activar) {
+    sel.innerHTML = '<option value="">— elegir —</option><option>Pago parcial</option><option>Liquidación</option>';
+  } else {
+    fill('condicion', catalogos.condiciones || []);
+  }
+  sel.disabled = false;
 }
 
 // ============================================================
@@ -698,6 +731,7 @@ function initApp() {
       $('medico').value = 'Dr. Miguel Soto'; $('medico').disabled = true;
       $('operativo').value = 'Dr. Miguel Soto'; $('operativo').disabled = true;
       aplicarAlcanceTerminalRenaste(false);
+      setCondicionesPaquete(false);
       cargarCotizaciones();
     } else if (this.value === 'Paquetes') {
       // Paquetes FZ/PRUC: se cobra contra un paquete del paciente; el dinero es de Renasté
@@ -707,6 +741,8 @@ function initApp() {
       DATOS_BLOQUEADOS = false;
       ['medico', 'operativo', 'prospecta', 'cierra'].forEach(id => { $(id).disabled = false; });
       aplicarAlcanceTerminalRenaste(true);  // el dinero del paquete es de Renasté → solo terminales Renasté
+      setCondicionesPaquete(true);          // solo Pago parcial / Liquidación
+      aplicaEfectivoTerminal();             // ajusta la terminal al método ya elegido
       cargarPaquetes();
     } else {
       show('grupoTratamiento');
@@ -718,6 +754,7 @@ function initApp() {
       hide('paqueteBox'); $('paqueteInfo').textContent = ''; PAQ_ELEGIDO = null;
       $('cotizacionInfo').textContent = '';
       aplicarAlcanceTerminalRenaste(false);
+      setCondicionesPaquete(false);
     }
   });
   $('cotizacionSel').addEventListener('change', onElegirCotizacion);
@@ -1643,6 +1680,9 @@ function onElegirPaquete() {
   $('monto').value = '';
   $('monto').placeholder = 'Monto del abono (saldo: ' + money(p.saldo) + ')';
   TRAT_ELEGIDO = { nombre: p.tratamiento, costo: p.granTotal, linea: 'Paquetes' };
+  // Reactiva la condición (por si venía bloqueada de una liquidación previa) y deja un default
+  $('condicion').disabled = false;
+  if (Number(p.saldo) > 0.01 && !$('condicion').value) $('condicion').value = 'Pago parcial';
   // Botón de liquidar: solo si queda saldo por cobrar
   if (Number(p.saldo) > 0.01) { show('btnLiquidarPaq'); } else { hide('btnLiquidarPaq'); }
 }
@@ -1651,6 +1691,9 @@ function onElegirPaquete() {
 function liquidarPaquete() {
   if (!PAQ_ELEGIDO) return;
   $('monto').value = Number(PAQ_ELEGIDO.saldo).toFixed(2);
+  // Es liquidación por definición: se fija y se bloquea la condición
+  $('condicion').value = 'Liquidación';
+  $('condicion').disabled = true;
 }
 
 /* === COTIZACIONES (Cirugía exige cotización aceptada) === */
