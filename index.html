@@ -303,12 +303,6 @@
             <button type="button" class="link" onclick="abrirEstadoCuenta()">Ver estado de cuenta</button>
           </div>
         </div>
-        <div class="form-group hidden" id="paqueteBox">
-          <label class="lbl">Paquete a cobrar (FZ / PRUC)</label>
-          <select id="paqueteSel"></select>
-          <div id="paqueteInfo" class="muted small" style="margin-top:6px;"></div>
-          <button type="button" class="btn btn-secondary hidden" id="btnLiquidarPaq" style="width:auto;margin-top:8px;" onclick="liquidarPaquete()">Liquidar este paquete (poner saldo)</button>
-        </div>
         <div class="grid2">
           <div class="form-group"><label class="lbl">Precio de lista</label><input type="number" id="precioLista" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></div>
           <div class="form-group"><label class="lbl" id="lblMonto">Monto a cobrar</label><input type="number" id="monto" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></div>
@@ -533,8 +527,6 @@ let CARRITO = [];
 let TRAT_ELEGIDO = null; // tratamiento seleccionado de la lista (estricto)
 let COT_ELEGIDA = null; // cotización aceptada elegida (cirugía)
 let COTIZACIONES_PAC = []; // cotizaciones aceptadas del paciente actual
-let PAQ_ELEGIDO = null; // paquete FZ/PRUC elegido (línea Paquetes)
-let PAQUETES_PAC = []; // paquetes del paciente actual
 let ESTADO_ACTUAL = null; // último estado de cuenta cargado (para compartir)
 let DATOS_BLOQUEADOS = false; // datos generales bloqueados (abono de una cotización con pagos previos)
 let BUSCANDO = null;
@@ -544,34 +536,12 @@ const $ = id => document.getElementById(id);
 const show = id => $(id).classList.remove('hidden');
 const hide = id => $(id).classList.add('hidden');
 
-// Mapa método→terminal Renasté (línea Paquetes: el dinero es 100% de Renasté)
-const TERMINAL_RENASTE_POR_METODO = {
-  'Efectivo': 'Efectivo Renasté',
-  'TDC': 'Multiva Renasté',
-  'TDD': 'Multiva Renasté',
-  'Link de Pago': 'Multiva Renasté',
-  'Transferencia': 'Cuenta Renasté'
-};
-
 // Efectivo: no se pregunta terminal; el efectivo entra completo a la Caja Dr. Miguel Soto
 function aplicaEfectivoTerminal() {
-  // Línea Paquetes: la terminal se auto-ajusta al método, siempre dentro de Renasté
-  if ($('linea').value === 'Paquetes') {
-    const t = TERMINAL_RENASTE_POR_METODO[$('metodo').value];
-    if (t) $('terminal').value = t;
-    show('grupoTerminal');
-    return;
-  }
   if ($('metodo').value === 'Efectivo') { $('terminal').value = 'Efectivo Dr.'; hide('grupoTerminal'); }
   else { show('grupoTerminal'); }
 }
 function aplicaEfectivoTerminalTrat() {
-  if ($('linea').value === 'Paquetes') {
-    const t = TERMINAL_RENASTE_POR_METODO[$('metodoTrat').value];
-    if (t) $('terminalTrat').value = t;
-    show('grupoTerminalTrat');
-    return;
-  }
   if ($('metodoTrat').value === 'Efectivo') { $('terminalTrat').value = 'Efectivo Dr.'; hide('grupoTerminalTrat'); }
   else { show('grupoTerminalTrat'); }
 }
@@ -610,34 +580,6 @@ function escapeHtml(s) {
 }
 function fill(id, arr) {
   $(id).innerHTML = '<option value="">— elegir —</option>' + arr.map(x => '<option>' + escapeHtml(x) + '</option>').join('');
-}
-
-// Para la línea Paquetes: el dinero es 100% de Renasté, así que las terminales
-// se limitan a las de Renasté (efectivo arranca en Efectivo Renasté). Para el
-// resto de líneas se restaura la lista completa.
-function aplicarAlcanceTerminalRenaste(soloRenaste) {
-  if (soloRenaste) {
-    const renaste = (catalogos.terminales || []).filter(t => /renast/i.test(t));
-    const ef = renaste.find(t => /efectivo/i.test(t)) || renaste[0] || '';
-    ['terminal', 'terminalTrat'].forEach(id => {
-      $(id).innerHTML = renaste.map(x => '<option>' + escapeHtml(x) + '</option>').join('');
-      $(id).value = ef;
-    });
-  } else {
-    fill('terminal', catalogos.terminales || []);
-    fill('terminalTrat', catalogos.terminales || []);
-  }
-}
-
-// Línea Paquetes: las únicas condiciones válidas son Pago parcial o Liquidación.
-function setCondicionesPaquete(activar) {
-  const sel = $('condicion');
-  if (activar) {
-    sel.innerHTML = '<option value="">— elegir —</option><option>Pago parcial</option><option>Liquidación</option>';
-  } else {
-    fill('condicion', catalogos.condiciones || []);
-  }
-  sel.disabled = false;
 }
 
 // ============================================================
@@ -726,24 +668,10 @@ function initApp() {
     if (this.value === 'Cirugía') {
       // Cirugía: se cobra contra una cotización aceptada, no por búsqueda de tratamiento
       hide('grupoTratamiento');
-      hide('paqueteBox'); $('paqueteInfo').textContent = ''; PAQ_ELEGIDO = null;
       // En cirugía, médico titular y operativo son SIEMPRE el Dr. Miguel Soto (no cambia)
       $('medico').value = 'Dr. Miguel Soto'; $('medico').disabled = true;
       $('operativo').value = 'Dr. Miguel Soto'; $('operativo').disabled = true;
-      aplicarAlcanceTerminalRenaste(false);
-      setCondicionesPaquete(false);
       cargarCotizaciones();
-    } else if (this.value === 'Paquetes') {
-      // Paquetes FZ/PRUC: se cobra contra un paquete del paciente; el dinero es de Renasté
-      hide('grupoTratamiento');
-      hide('cotizacionBox'); hide('cotizacionSaldo'); hide('cotizacionAcciones');
-      $('cotizacionInfo').textContent = '';
-      DATOS_BLOQUEADOS = false;
-      ['medico', 'operativo', 'prospecta', 'cierra'].forEach(id => { $(id).disabled = false; });
-      aplicarAlcanceTerminalRenaste(true);  // el dinero del paquete es de Renasté → solo terminales Renasté
-      setCondicionesPaquete(true);          // solo Pago parcial / Liquidación
-      aplicaEfectivoTerminal();             // ajusta la terminal al método ya elegido
-      cargarPaquetes();
     } else {
       show('grupoTratamiento');
       DATOS_BLOQUEADOS = false;
@@ -751,14 +679,10 @@ function initApp() {
       hide('cotizacionBox');
       hide('cotizacionSaldo');
       hide('cotizacionAcciones');
-      hide('paqueteBox'); $('paqueteInfo').textContent = ''; PAQ_ELEGIDO = null;
       $('cotizacionInfo').textContent = '';
-      aplicarAlcanceTerminalRenaste(false);
-      setCondicionesPaquete(false);
     }
   });
   $('cotizacionSel').addEventListener('change', onElegirCotizacion);
-  $('paqueteSel').addEventListener('change', onElegirPaquete);
   $('liquidarSplit').addEventListener('change', function() {
     if (this.checked && COT_ELEGIDA) {
       // Liquidación: el monto es el saldo completo y la condición es "Liquidación" (no se pregunta)
@@ -872,7 +796,6 @@ function elegirPaciente(p) {
   hide('histBox');
   // Si ya estaba seleccionada la línea Cirugía, recargar las cotizaciones del nuevo paciente
   if ($('linea').value === 'Cirugía') cargarCotizaciones();
-  if ($('linea').value === 'Paquetes') cargarPaquetes();
 }
 function limpiarPaciente() {
   PAC = null;
@@ -975,7 +898,6 @@ async function enviarCobro() {
     tipoCambio: t.moneda === 'USD' ? t.tipoCambio : '',
     factura: comun.factura, numFactura: comun.numFactura,
     cotizacionId: t.cotizacionId || '',
-    esPaquete: t.esPaquete || false,
     observaciones: [comun.observaciones, t.obsDescuento].filter(Boolean).join(' · ')
   }));
 
@@ -1150,8 +1072,6 @@ function nuevoCobro() {
   TRAT_ELEGIDO = null;
   COT_ELEGIDA = null;
   COTIZACIONES_PAC = [];
-  PAQ_ELEGIDO = null;
-  PAQUETES_PAC = [];
   renderCarrito();
   ['tratamiento', 'monto', 'tc', 'obs', 'buscaPac', 'numFactura', 'precioLista', 'descuento', 'descuentoMonto', 'autorizaDesc'].forEach(id => $(id).value = '');
   $('tratamiento').readOnly = false;
@@ -1168,7 +1088,6 @@ function nuevoCobro() {
   limpiarErrores();
   hide('pacSel'); hide('boxTC'); hide('previewMXN'); hide('msg'); hide('boxNumFactura'); hide('boxPagoTrat'); hide('histBox'); hide('boxAutoriza');
   hide('cotizacionBox'); hide('cotizacionSaldo'); hide('cotizacionAcciones');
-  hide('paqueteBox'); $('paqueteInfo').textContent = ''; $('paqueteSel').innerHTML = '';
   show('grupoTratamiento');
   $('liquidarSplit').checked = false;
   $('cotizacionInfo').textContent = ''; $('cotizacionSel').innerHTML = '';
@@ -1210,9 +1129,12 @@ function onBuscarTrat() {
   }
   const money = n => '$' + Number(n).toLocaleString('es-MX', { minimumFractionDigits: 0 });
   $('tratResultados').innerHTML = matches.map((p, i) =>
-    '<div class="trat-item" data-i="' + i + '" onclick="elegirTrat(' + i + ')">' +
+    '<div class="trat-item' + (p.esPaquete ? ' trat-paquete' : '') + '" data-i="' + i + '" onclick="elegirTrat(' + i + ')"' +
+      (p.esPaquete ? ' style="opacity:0.6;"' : '') + '>' +
       '<span class="tp">' + money(p.costo) + '</span>' +
-      '<div class="tn">' + escapeHtml(p.nombre) + '</div>' +
+      '<div class="tn">' + escapeHtml(p.nombre) +
+        (p.esPaquete ? ' <span style="color:var(--error);font-size:0.7rem;font-weight:600;">PAQUETE · por cotización</span>' : '') +
+      '</div>' +
       (p.categoria ? '<div class="tc">' + escapeHtml(p.categoria) + '</div>' : '') +
     '</div>'
   ).join('');
@@ -1224,6 +1146,11 @@ function elegirTrat(i) {
   const matches = $('tratResultados')._matches || [];
   const p = matches[i];
   if (!p) return;
+  if (p.esPaquete) {
+    hide('tratResultados');
+    showMsg('"' + p.nombre + '" es un PAQUETE: no se cobra directo aquí. Debe cotizarse, aceptarse la cotización y cobrarse como paquete (entra a la app de paquetes y descuenta sesiones).');
+    return;
+  }
   $('tratamiento').value = p.nombre;
   $('precioLista').value = p.costo;
   TRAT_ELEGIDO = { nombre: p.nombre, costo: p.costo, linea: p.linea };
@@ -1330,12 +1257,6 @@ function agregarTratamiento() {
   const condicion = $('condicion').value;
   const esCortesia = (condicion === 'Cortesía');
 
-  // === Paquetes: exige paquete elegido ===
-  if (linea === 'Paquetes' && !esCortesia && !PAQ_ELEGIDO) {
-    marcarError('paqueteSel');
-    return showMsg('Elige el paquete a cobrar en el menú "Paquete a cobrar".');
-  }
-
   const faltan = [];
   if (!linea) { marcarError('linea'); faltan.push('línea de negocio'); }
   if (!tratamiento) { marcarError('tratamiento'); faltan.push('tratamiento'); }
@@ -1399,9 +1320,7 @@ function agregarTratamiento() {
     monto: esCortesia ? 0 : monto,
     metodo: metodo, terminal: terminal, moneda: moneda,
     tipoCambio: tc,
-    cotizacionId: (linea === 'Cirugía' && COT_ELEGIDA) ? COT_ELEGIDA.cotizacionId
-                : ((linea === 'Paquetes' && PAQ_ELEGIDO) ? PAQ_ELEGIDO.cotizacionId : ''),
-    esPaquete: (linea === 'Paquetes')
+    cotizacionId: (linea === 'Cirugía' && COT_ELEGIDA) ? COT_ELEGIDA.cotizacionId : ''
   });
   renderCarrito();
   limpiarTratamiento();
@@ -1485,7 +1404,6 @@ function limpiarTratamiento() {
   $('pagoDistinto').disabled = false;
   TRAT_ELEGIDO = null;
   COT_ELEGIDA = null;
-  PAQ_ELEGIDO = null;
   $('linea').selectedIndex = 0;
   $('condicion').selectedIndex = 0;
   $('condicion').disabled = false;
@@ -1496,9 +1414,6 @@ function limpiarTratamiento() {
   hide('cotizacionBox');
   hide('cotizacionSaldo');
   hide('cotizacionAcciones');
-  hide('paqueteBox');
-  $('paqueteInfo').textContent = '';
-  $('paqueteSel').innerHTML = '';
   show('grupoTratamiento');
   $('liquidarSplit').checked = false;
   $('cotizacionInfo').textContent = '';
@@ -1625,76 +1540,6 @@ function limpiarErrores() {
   document.querySelectorAll('.campo-error').forEach(el => el.classList.remove('campo-error'));
 }
 
-
-/* === PAQUETES (línea Paquetes: FZ/PRUC, dinero a Renasté) === */
-
-async function cargarPaquetes() {
-  PAQ_ELEGIDO = null; PAQUETES_PAC = []; TRAT_ELEGIDO = null;
-  const box = $('paqueteBox'); const sel = $('paqueteSel'); const info = $('paqueteInfo');
-  box.classList.remove('hidden');
-  $('tratamiento').value = ''; $('precioLista').value = ''; $('monto').value = '';
-  if (!PAC) {
-    sel.innerHTML = '<option value="">— selecciona primero al paciente —</option>';
-    info.textContent = '';
-    return;
-  }
-  sel.innerHTML = '<option value="">Cargando paquetes…</option>';
-  info.textContent = '';
-  const r = await callAPI('paquetesPaciente', { idPaciente: PAC.id });
-  if (!r.ok || !r.data || !r.data.length) {
-    sel.innerHTML = '<option value="">— sin paquetes —</option>';
-    info.innerHTML = '<span style="color:var(--error)">Este paciente no tiene paquetes. Genera la cotización del paquete en el cotizador y márcala aceptada.</span>';
-    return;
-  }
-  PAQUETES_PAC = r.data;
-  const money = n => '$' + Number(n).toLocaleString('es-MX', { minimumFractionDigits: 2 });
-  sel.innerHTML = '<option value="">— elegir paquete —</option>' + r.data.map(p =>
-    '<option value="' + escapeHtml(p.paqueteId) + '">' +
-      escapeHtml(p.tratamiento) + ' · ' + escapeHtml(p.cotizacionId) + ' · saldo ' + money(p.saldo) + (p.pagado ? ' · PAGADO' : '') +
-    '</option>'
-  ).join('');
-}
-
-function onElegirPaquete() {
-  const id = $('paqueteSel').value;
-  const info = $('paqueteInfo');
-  const p = PAQUETES_PAC.find(x => x.paqueteId === id);
-  if (!p) {
-    PAQ_ELEGIDO = null; TRAT_ELEGIDO = null;
-    info.textContent = '';
-    $('tratamiento').value = ''; $('tratamiento').readOnly = false;
-    $('precioLista').value = ''; $('monto').value = '';
-    hide('btnLiquidarPaq');
-    return;
-  }
-  PAQ_ELEGIDO = p;
-  const money = n => '$' + Number(n).toLocaleString('es-MX', { minimumFractionDigits: 2 });
-  info.innerHTML =
-    'Total: <b>' + money(p.granTotal) + '</b> · Abonado: <b>' + money(p.abonado) + '</b> · ' +
-    'Saldo: <b style="color:var(--accent-dark)">' + money(p.saldo) + '</b>' +
-    (p.pagado ? ' · <b style="color:var(--success)">PAGADO</b>' : '') +
-    '<br>Todo el cobro se asigna a <b>Renasté</b>.';
-  $('tratamiento').value = p.tratamiento;
-  $('tratamiento').readOnly = true;
-  $('precioLista').value = p.granTotal;
-  $('monto').value = '';
-  $('monto').placeholder = 'Monto del abono (saldo: ' + money(p.saldo) + ')';
-  TRAT_ELEGIDO = { nombre: p.tratamiento, costo: p.granTotal, linea: 'Paquetes' };
-  // Reactiva la condición (por si venía bloqueada de una liquidación previa) y deja un default
-  $('condicion').disabled = false;
-  if (Number(p.saldo) > 0.01 && !$('condicion').value) $('condicion').value = 'Pago parcial';
-  // Botón de liquidar: solo si queda saldo por cobrar
-  if (Number(p.saldo) > 0.01) { show('btnLiquidarPaq'); } else { hide('btnLiquidarPaq'); }
-}
-
-// Pone el saldo completo del paquete en el campo de monto (cobro de liquidación con un clic)
-function liquidarPaquete() {
-  if (!PAQ_ELEGIDO) return;
-  $('monto').value = Number(PAQ_ELEGIDO.saldo).toFixed(2);
-  // Es liquidación por definición: se fija y se bloquea la condición
-  $('condicion').value = 'Liquidación';
-  $('condicion').disabled = true;
-}
 
 /* === COTIZACIONES (Cirugía exige cotización aceptada) === */
 
@@ -2524,67 +2369,5 @@ async function guardarConciliacion() {
     </div>
   </div>
 </div>
-  <!-- ============================================================
-     MS UNIVERSE · Lanzador minimalista entre apps
-     Pega este bloque COMPLETO justo antes de </body> en:
-       agenda · cotizador · cobros  (el mismo código en las tres)
-     Por defecto es solo un círculo "MS" en la esquina.
-     Al tocarlo se abre el menú; al tocar fuera se cierra.
-     Detecta sola en cuál app estás y la marca.
-     ============================================================ -->
-<div id="ms-switch">
-  <div class="ms-menu">
-    <a data-app="app"       href="https://app.miguelsotomd.com">Portal</a>
-    <a data-app="agenda"    href="https://agenda.miguelsotomd.com">Agenda</a>
-    <a data-app="cotizador" href="https://cotizador.miguelsotomd.com">Cotizador</a>
-    <a data-app="cobros"    href="https://cobros.miguelsotomd.com">Cobros</a>
-  </div>
-  <button class="ms-trigger" type="button" aria-label="Cambiar de app">
-    <span class="ms-mark">MS</span>
-  </button>
-</div>
-
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500&display=swap');
-  /* Posición: por defecto abajo-derecha. Para moverlo cambia bottom/right.
-     Abajo-izquierda: left:20px; right:auto;  Arriba-derecha: top:20px; bottom:auto; */
-  #ms-switch{ position:fixed; bottom:20px; right:20px; z-index:99999;
-    font-family:'Jost',-apple-system,system-ui,sans-serif; display:flex;
-    flex-direction:column; align-items:flex-end; gap:10px; }
-
-  .ms-trigger{ width:48px; height:48px; border-radius:50%; cursor:pointer;
-    background:rgba(7,9,8,.88); border:1px solid rgba(161,148,135,.35);
-    backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
-    box-shadow:0 10px 28px -10px rgba(0,0,0,.6); transition:transform .3s, border-color .3s;
-    display:flex; align-items:center; justify-content:center; padding:0; }
-  .ms-trigger:hover{ border-color:rgba(161,148,135,.7); }
-  .ms-mark{ font-size:15px; font-weight:400; letter-spacing:.12em; color:#F4F2F1; }
-  #ms-switch.open .ms-trigger{ transform:rotate(90deg); border-color:#A19487; }
-
-  .ms-menu{ display:flex; flex-direction:column; align-items:flex-end; gap:7px;
-    opacity:0; pointer-events:none; transform:translateY(8px); transition:opacity .28s, transform .28s; }
-  #ms-switch.open .ms-menu{ opacity:1; pointer-events:auto; transform:translateY(0); }
-  .ms-menu a{ text-decoration:none; color:#F4F2F1; font-size:12.5px; font-weight:300;
-    letter-spacing:.14em; text-transform:uppercase; padding:9px 16px; border-radius:999px;
-    background:rgba(7,9,8,.88); border:1px solid rgba(161,148,135,.22);
-    backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
-    box-shadow:0 8px 22px -12px rgba(0,0,0,.6); white-space:nowrap; transition:background .25s,color .25s; }
-  .ms-menu a:hover{ background:rgba(161,148,135,.18); color:#fff; }
-  .ms-menu a.ms-active{ background:#A19487; color:#070908; font-weight:500; pointer-events:none; }
-</style>
-
-<script>
-  (function(){
-    var box = document.getElementById('ms-switch');
-    var trigger = box.querySelector('.ms-trigger');
-    var sub = location.hostname.split('.')[0]; // agenda | cotizador | cobros | app
-    box.querySelectorAll('.ms-menu a').forEach(function(a){
-      if (a.getAttribute('data-app') === sub) a.classList.add('ms-active');
-    });
-    trigger.addEventListener('click', function(e){ e.stopPropagation(); box.classList.toggle('open'); });
-    document.addEventListener('click', function(){ box.classList.remove('open'); });
-  })();
-</script>
-<!-- ===================== fin lanzador MS Universe ===================== -->
 </body>
 </html>
