@@ -589,6 +589,23 @@ function fill(id, arr) {
   $(id).innerHTML = '<option value="">— elegir —</option>' + arr.map(x => '<option>' + escapeHtml(x) + '</option>').join('');
 }
 
+// Para la línea Paquetes: el dinero es 100% de Renasté, así que las terminales
+// se limitan a las de Renasté (efectivo arranca en Efectivo Renasté). Para el
+// resto de líneas se restaura la lista completa.
+function aplicarAlcanceTerminalRenaste(soloRenaste) {
+  if (soloRenaste) {
+    const renaste = (catalogos.terminales || []).filter(t => /renast/i.test(t));
+    const ef = renaste.find(t => /efectivo/i.test(t)) || renaste[0] || '';
+    ['terminal', 'terminalTrat'].forEach(id => {
+      $(id).innerHTML = renaste.map(x => '<option>' + escapeHtml(x) + '</option>').join('');
+      $(id).value = ef;
+    });
+  } else {
+    fill('terminal', catalogos.terminales || []);
+    fill('terminalTrat', catalogos.terminales || []);
+  }
+}
+
 // ============================================================
 // GOOGLE SIGN-IN
 // ============================================================
@@ -679,6 +696,7 @@ function initApp() {
       // En cirugía, médico titular y operativo son SIEMPRE el Dr. Miguel Soto (no cambia)
       $('medico').value = 'Dr. Miguel Soto'; $('medico').disabled = true;
       $('operativo').value = 'Dr. Miguel Soto'; $('operativo').disabled = true;
+      aplicarAlcanceTerminalRenaste(false);
       cargarCotizaciones();
     } else if (this.value === 'Paquetes') {
       // Paquetes FZ/PRUC: se cobra contra un paquete del paciente; el dinero es de Renasté
@@ -687,6 +705,7 @@ function initApp() {
       $('cotizacionInfo').textContent = '';
       DATOS_BLOQUEADOS = false;
       ['medico', 'operativo', 'prospecta', 'cierra'].forEach(id => { $(id).disabled = false; });
+      aplicarAlcanceTerminalRenaste(true);  // el dinero del paquete es de Renasté → solo terminales Renasté
       cargarPaquetes();
     } else {
       show('grupoTratamiento');
@@ -697,6 +716,7 @@ function initApp() {
       hide('cotizacionAcciones');
       hide('paqueteBox'); $('paqueteInfo').textContent = ''; PAQ_ELEGIDO = null;
       $('cotizacionInfo').textContent = '';
+      aplicarAlcanceTerminalRenaste(false);
     }
   });
   $('cotizacionSel').addEventListener('change', onElegirCotizacion);
