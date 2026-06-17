@@ -1206,12 +1206,6 @@ function onBuscarTrat() {
   show('tratResultados');
   const palabras = q.split(/\s+/);
   // Solo tratamientos de la línea seleccionada (búsqueda sin acentos)
-  const matches = PRECIOS.filter(p => {
-    if (p.linea !== lineaSel) return false;
-      if (_normTxt(lineaSel).indexOf('fibrosis') !== -1 && _esPaqueteFZ(p.nombre)) return false;
- 
- Debe quedar así:
- 
     const matches = PRECIOS.filter(p => {
       if (p.linea !== lineaSel) return false;
       if (_normTxt(lineaSel).indexOf('fibrosis') !== -1 && _esPaqueteFZ(p.nombre)) return false;
@@ -1219,9 +1213,6 @@ function onBuscarTrat() {
       return palabras.every(w => nl.indexOf(w) !== -1);
     }).slice(0, 30);
  
-    const nl = _normTxt(p.nombre + ' ' + (p.categoria || ''));
-    return palabras.every(w => nl.indexOf(w) !== -1);
-  }).slice(0, 30);
   if (!matches.length) {
     $('tratResultados').innerHTML = '<div class="trat-buscando">Sin coincidencias en esta línea — puedes escribir el concepto y precio a mano</div>';
     return;
