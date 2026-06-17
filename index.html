@@ -1184,6 +1184,13 @@ function nuevoCobro() {
 function _normTxt(s) {
   return String(s == null ? '' : s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 }
+  // True si el nombre es un PAQUETE de Fibrosis Zero (2+ sesiones, plural).
+// Mismo criterio que _detectarPaquetesFZ del cotizador (N>=2). Los paquetes solo
+// se cobran entrando por la línea "Paquetes" con un paquete cotizado, no por aquí.
+function _esPaqueteFZ(nombre) {
+  const m = String(nombre || '').match(/(\d+)\s*sesion/i);
+  return !!(m && parseInt(m[1], 10) >= 2);
+}
 function onBuscarTrat() {
   const q = _normTxt($('tratamiento').value.trim());
   const lineaSel = $('linea').value;
@@ -1201,6 +1208,17 @@ function onBuscarTrat() {
   // Solo tratamientos de la línea seleccionada (búsqueda sin acentos)
   const matches = PRECIOS.filter(p => {
     if (p.linea !== lineaSel) return false;
+      if (_normTxt(lineaSel).indexOf('fibrosis') !== -1 && _esPaqueteFZ(p.nombre)) return false;
+ 
+ Debe quedar así:
+ 
+    const matches = PRECIOS.filter(p => {
+      if (p.linea !== lineaSel) return false;
+      if (_normTxt(lineaSel).indexOf('fibrosis') !== -1 && _esPaqueteFZ(p.nombre)) return false;
+      const nl = _normTxt(p.nombre + ' ' + (p.categoria || ''));
+      return palabras.every(w => nl.indexOf(w) !== -1);
+    }).slice(0, 30);
+ 
     const nl = _normTxt(p.nombre + ' ' + (p.categoria || ''));
     return palabras.every(w => nl.indexOf(w) !== -1);
   }).slice(0, 30);
