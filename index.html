@@ -1,2510 +1,454 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cobros — Dr. Miguel Soto</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <style>
-    :root {
-      --bg: #f1ebe1;
-      --bg-soft: #ebe4d6;
-      --card: #ffffff;
-      --border: #d8cfbf;
-      --border-soft: #ebe4d6;
-      --text: #1a1a1a;
-      --text-muted: #8a8378;
-      --text-faint: #b3a895;
-      --black: #1a1a1a;
-      --accent: #b09372;
-      --accent-dark: #8e7456;
-      --success: #5a7a4e;
-      --error: #a13a3a;
-      --shadow-sm: 0 1px 2px rgba(0,0,0,0.03);
-      --shadow-md: 0 2px 12px rgba(0,0,0,0.06);
-      --serif: 'Playfair Display', Georgia, serif;
-      --sans: 'Inter', -apple-system, system-ui, sans-serif;
-    }
-    * { box-sizing: border-box; }
-    html, body { margin: 0; padding: 0; }
-    body {
-      background: var(--bg); font-family: var(--sans); color: var(--text);
-      font-size: 14px; line-height: 1.5; min-height: 100vh; -webkit-font-smoothing: antialiased;
-    }
-    .hidden { display: none !important; }
-    .serif { font-family: var(--serif); font-weight: 400; }
-    .muted { color: var(--text-muted); }
-    .small { font-size: 0.8rem; }
-
-    /* TOP BAR */
-    .topbar { display: flex; align-items: center; justify-content: center; padding: 14px 24px; gap: 18px; font-size: 0.72rem; color: var(--text-muted); background: var(--bg); }
-    .topbar .email { letter-spacing: 0.04em; }
-    .topbar .salir { color: var(--text); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; background: none; border: 0; padding: 0; font-size: inherit; font-family: inherit; }
-    .topbar .salir:hover { color: var(--accent-dark); }
-
-    /* HERO */
-    .hero { background: var(--black); color: #fff; padding: 26px 40px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 24px; }
-    .hero-left .step-num { font-family: var(--serif); font-size: 0.75rem; letter-spacing: 0.18em; color: #b3a895; }
-    .hero-left .step-name { font-size: 0.72rem; letter-spacing: 0.22em; text-transform: uppercase; color: #fff; margin-top: 2px; font-weight: 500; }
-    .hero-logo-img { height: 56px; width: auto; display: block; margin: 0 auto; }
-    .hero-right { text-align: right; }
-    .hero-right .doc-name { font-size: 0.72rem; letter-spacing: 0.22em; text-transform: uppercase; font-weight: 500; }
-    .hero-right .doc-title { font-size: 0.68rem; letter-spacing: 0.18em; text-transform: uppercase; color: #b3a895; margin-top: 2px; }
-
-    /* MAIN */
-    main { max-width: 720px; margin: 48px auto; padding: 0 24px; }
-    .view-title { font-family: var(--serif); font-size: 2rem; font-weight: 400; text-align: center; margin: 0 0 8px 0; letter-spacing: -0.01em; }
-    .view-subtitle { text-align: center; color: var(--text-muted); font-size: 0.72rem; letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 36px; }
-    .card { background: var(--card); border: 1px solid var(--border-soft); border-radius: 4px; padding: 28px; box-shadow: var(--shadow-sm); }
-
-    /* FORM */
-    label.lbl { display: block; font-size: 0.7rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; font-weight: 500; }
-    input[type="text"], input[type="number"], select {
-      width: 100%; padding: 12px 14px; font-family: var(--sans); font-size: 0.92rem; color: var(--text);
-      background: #fff; border: 1px solid var(--border); border-radius: 3px; outline: none; transition: border-color 0.15s;
-    }
-    input:focus, select:focus { border-color: var(--accent); }
-    input::placeholder { color: var(--text-faint); }
-    select { cursor: pointer; appearance: none; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path fill='%238a8378' d='M6 8L0 0h12z'/></svg>"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
-    .form-group { margin-bottom: 18px; }
-    .grid2 { display: grid; gap: 16px; grid-template-columns: 1fr 1fr; }
-    .grid3 { display: grid; gap: 16px; grid-template-columns: 1fr 1fr 1fr; }
-    @media (max-width: 600px) { .grid2, .grid3 { grid-template-columns: 1fr; } }
-
-    /* BUSCADOR DE PACIENTE */
-    .buscador { position: relative; }
-    .resultados { position: absolute; left: 0; right: 0; top: calc(100% + 4px); background: #fff; border: 1px solid var(--border); border-radius: 3px; box-shadow: var(--shadow-md); z-index: 50; max-height: 320px; overflow-y: auto; }
-    .resultados > div { padding: 12px 16px; cursor: pointer; border-bottom: 1px solid var(--border-soft); transition: background 0.1s; }
-    .resultados > div:last-child { border-bottom: 0; }
-    .resultados > div:hover { background: var(--bg-soft); }
-    .resultados .rid { color: var(--text-muted); font-size: 0.72rem; letter-spacing: 0.08em; margin-top: 2px; }
-    .pac-sel { display: flex; align-items: center; justify-content: space-between; gap: 16px; background: var(--bg-soft); border: 1px solid var(--border-soft); border-radius: 3px; padding: 14px 18px; margin-top: 4px; }
-    .pac-sel .pac-nombre { font-family: var(--serif); font-size: 1.1rem; }
-    .link { background: none; border: 0; color: var(--accent-dark); cursor: pointer; font-family: var(--sans); font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 500; }
-    .link:hover { color: var(--text); }
-    .aviso { background: #fbf3e6; border: 1px solid #e8d9bc; color: #8a6d3b; border-radius: 3px; padding: 14px 16px; margin-top: 8px; font-size: 0.86rem; }
-    .fac-item { border: 1px solid var(--border-soft); border-radius: 3px; padding: 16px 18px; margin-bottom: 16px; background: var(--bg-soft); }
-    .fac-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-    .exito-banner { background: #e7f6ec; border: 1px solid #b7e0c4; color: #1e7e42; font-size: 1.15rem; font-weight: 600; text-align: center; padding: 18px 20px; border-radius: 4px; margin-bottom: 20px; letter-spacing: 0.3px; }
-    .trat-resultados { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid var(--border-soft); border-top: none; border-radius: 0 0 4px 4px; max-height: 280px; overflow-y: auto; z-index: 50; box-shadow: 0 8px 24px rgba(0,0,0,0.10); }
-    .trat-item { padding: 10px 14px; cursor: pointer; border-bottom: 1px solid #f0ece5; }
-    .trat-item:hover, .trat-item.active { background: var(--bg-soft); }
-    .trat-item .tn { font-size: 0.92rem; color: var(--ink); }
-    .trat-item .tc { font-size: 0.78rem; color: var(--taupe); margin-top: 2px; }
-    .trat-item .tp { float: right; font-weight: 600; color: var(--ink); }
-    .trat-buscando { padding: 12px 14px; color: var(--taupe); font-size: 0.85rem; font-style: italic; }
-    .cart-item { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; border: 1px solid var(--border-soft); border-radius: 4px; padding: 12px 14px; margin-bottom: 8px; background: var(--bg-soft); }
-    .cart-item .ci-nombre { font-weight: 600; font-size: 0.95rem; }
-    .cart-item .ci-meta { font-size: 0.8rem; color: var(--taupe); margin-top: 3px; }
-    .cart-item .ci-monto { font-weight: 600; white-space: nowrap; }
-    .cart-item .ci-quitar { color: #c0392b; cursor: pointer; font-size: 0.8rem; margin-top: 4px; display: inline-block; }
-    .campo-error input, .campo-error select, input.campo-error, select.campo-error { border-color: #c0392b !important; background: #fdf2f2 !important; }
-    .hist-box { border: 1px solid var(--border-soft); border-radius: 4px; padding: 14px 16px; margin-top: 10px; background: #fff; }
-    .hist-box .hh { font-weight: 600; font-size: 0.9rem; margin-bottom: 8px; }
-    .hist-row { display: flex; justify-content: space-between; gap: 10px; font-size: 0.82rem; padding: 6px 0; border-bottom: 1px solid #f0ece5; }
-    .hist-row .hl { color: var(--ink); }
-    .hist-row .hm { color: var(--taupe); font-size: 0.75rem; }
-    .hist-total { text-align: right; font-weight: 700; font-size: 0.95rem; margin-top: 10px; color: var(--ink); }
-
-    /* BUTTONS */
-    .btn { display: inline-flex; align-items: center; justify-content: center; padding: 13px 28px; font-family: var(--sans); font-size: 0.72rem; letter-spacing: 0.18em; text-transform: uppercase; font-weight: 500; border: 0; border-radius: 3px; cursor: pointer; transition: all 0.15s; gap: 8px; }
-    .btn-primary { background: var(--black); color: #fff; width: 100%; margin-top: 8px; }
-    .btn-primary:hover:not(:disabled) { background: #000; }
-    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-    input:disabled { background: #f0ece5 !important; opacity: 0.6; cursor: not-allowed; }
-    .btn-secondary { background: transparent; color: var(--text); border: 1px solid var(--border); }
-    .btn-secondary:hover { background: var(--bg-soft); border-color: var(--accent); }
-
-    .section-label { font-family: var(--serif); font-size: 1.15rem; margin: 26px 0 14px; }
-    .section-label:first-child { margin-top: 0; }
-    .preview-mxn { color: var(--accent-dark); font-size: 0.85rem; margin-top: -8px; margin-bottom: 8px; }
-
-    /* ALERTS */
-    .alert { padding: 14px 18px; border-radius: 3px; margin-top: 16px; font-size: 0.88rem; }
-    .alert-error { background: #fbe6e6; border: 1px solid #e7c3c3; color: var(--error); }
-
-    /* LOGIN */
-    .login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
-    .login-card { background: #fff; border: 1px solid var(--border-soft); border-radius: 6px; padding: 48px 40px; max-width: 420px; width: 100%; text-align: center; box-shadow: var(--shadow-md); }
-    .login-card .login-logo-img { height: 96px; width: auto; margin: 0 auto 8px; display: block; }
-    .login-card .login-doc { font-size: 0.7rem; letter-spacing: 0.22em; color: var(--text-muted); text-transform: uppercase; margin-bottom: 32px; }
-    .login-card h1 { font-family: var(--serif); font-size: 1.6rem; font-weight: 400; margin: 0 0 6px 0; }
-    .login-card .login-sub { color: var(--text-muted); font-size: 0.72rem; letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 28px; }
-    .login-card .login-error { color: var(--error); font-size: 0.82rem; margin-top: 16px; min-height: 18px; }
-    .login-card .login-note { color: var(--text-muted); font-size: 0.78rem; margin-top: 24px; line-height: 1.5; font-style: italic; }
-    #google-signin-btn { display: flex; justify-content: center; margin-top: 8px; }
-
-    /* RECIBO */
-    .recibo { border: 1px solid var(--border); border-radius: 4px; padding: 28px; }
-    .recibo .rb-h { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--border-soft); padding-bottom: 16px; margin-bottom: 16px; }
-    .recibo .brand { font-family: var(--serif); font-size: 1.1rem; letter-spacing: 0.04em; }
-    .recibo .sub { font-size: 0.62rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-muted); margin-top: 2px; }
-    .recibo .doc-tag { font-size: 0.62rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-muted); text-align: right; }
-    .recibo .folio { font-family: var(--serif); font-size: 1.2rem; color: var(--accent-dark); text-align: right; margin-top: 2px; }
-    .recibo table { width: 100%; border-collapse: collapse; }
-    .recibo td { padding: 8px 0; border-bottom: 1px solid var(--border-soft); font-size: 0.9rem; vertical-align: top; }
-    .recibo td.k { color: var(--text-muted); width: 42%; font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; padding-top: 11px; }
-    .recibo td.total { font-family: var(--serif); font-size: 1.15rem; color: var(--text); border-bottom: 0; padding-top: 14px; }
-    .recibo .pie { color: var(--text-muted); font-size: 0.78rem; margin-top: 16px; font-style: italic; }
-    .acciones { display: flex; gap: 12px; justify-content: center; margin-top: 24px; }
-
-    @media (max-width: 600px) {
-      .hero { padding: 18px 20px; grid-template-columns: 1fr; text-align: center; gap: 12px; }
-      .hero-right, .hero-left { text-align: center; }
-      main { margin: 24px auto; padding: 0 16px; }
-      .view-title { font-size: 1.5rem; }
-      .card { padding: 20px; }
-    }
-
-    /* Tablas de reportes / conciliación */
-    .rep-doc { font-size: 0.92rem; }
-    .rep-head { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid var(--border); padding-bottom: 10px; margin-bottom: 6px; gap: 12px; }
-    .rep-tbl { width: 100%; border-collapse: collapse; }
-    .rep-tbl th, .rep-tbl td { padding: 6px 8px; border-bottom: 1px solid var(--border-soft); text-align: left; vertical-align: top; }
-    .rep-tbl thead th { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); border-bottom: 1px solid var(--border); }
-    .rep-tbl tbody tr:last-child td { border-bottom: 0; }
-
-    /* IMPRESIÓN: solo el contenido visible (recibo / estado / reporte) */
-    @media print {
-      body { background: #fff; }
-      .topbar, .hero, .view-title, .view-subtitle, .acciones, .noprint, .rep-tabs { display: none !important; }
-      main { margin: 0; max-width: 100%; }
-      .card { border: 0; box-shadow: none; padding: 0; }
-      .recibo { border: 0; padding: 0; }
-      .rep-tbl th, .rep-tbl td { padding: 4px 6px; }
-    }
-.modal-overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.55);
-  display: flex; align-items: center; justify-content: center;
-  z-index: 1000; padding: 24px;
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0e1116">
+<title>Novalyx CRM · Seguimiento</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+:root{
+  --bg:#0e1116; --bg2:#12171e; --panel:#171d26; --panel2:#1e2530; --line:#2a323d;
+  --txt:#eef2f7; --muted:#8b97a7; --soft:#b3bdca;
+  --gold:#c9a96a; --gold2:#e4ca8f; --rose:#e09bb4; --green:#56c596; --amber:#e8b964; --red:#e98080; --blue:#73a9f0; --teal:#5fc6c0; --purple:#b58cf0;
+  --shadow:0 10px 30px rgba(0,0,0,.35);
 }
-.modal-card {
-  background: #fff; border-radius: 8px;
-  padding: 24px; max-width: 520px; width: 100%;
-  box-shadow: 0 4px 28px rgba(0,0,0,0.2);
-}
-.modal-card h3 { margin: 0 0 12px 0; }
-.split-row {
-  display: grid; grid-template-columns: 1.4fr 1fr 1.4fr;
-  gap: 10px; padding: 10px 12px; align-items: center;
-  background: #f6f3ee; border-radius: 6px; margin: 6px 0;
-}
-.split-row .lbl-r { color: #666; font-size: 14px; }
-.split-row .amt { font-weight: bold; text-align: right; }
-.split-row select { padding: 6px; width: 100%; }
-.modal-actions {
-  display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px;
-}
-  </style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:
+  radial-gradient(1200px 600px at 100% -10%,rgba(201,169,106,.10),transparent 60%),
+  radial-gradient(900px 500px at -10% 110%,rgba(224,155,180,.08),transparent 60%),
+  var(--bg);color:var(--txt);min-height:100vh;font-size:15px;-webkit-font-smoothing:antialiased}
+.app{max-width:560px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;position:relative;padding-bottom:84px}
+::-webkit-scrollbar{width:0}
+button{font-family:inherit;cursor:pointer;border:none}
+.hidden{display:none!important}
+
+/* LOGIN */
+.login{min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:30px;text-align:center}
+.logo{font-size:36px;letter-spacing:6px;font-weight:300}
+.logo b{font-weight:700;color:var(--gold)}
+.login .tag{color:var(--muted);font-size:12px;letter-spacing:3px;text-transform:uppercase;margin-top:6px}
+.login h2{margin:46px 0 6px;font-weight:600;font-size:20px}
+.login p{color:var(--muted);font-size:13.5px;margin-bottom:26px;max-width:300px}
+#gbtn{display:flex;justify-content:center;min-height:44px}
+.login .demo,.login .cfg{margin-top:26px;font-size:12.5px;color:var(--muted);text-decoration:underline;background:none}
+.login .warn{background:rgba(232,185,100,.12);border:1px solid rgba(232,185,100,.3);color:var(--amber);font-size:12.5px;padding:12px 14px;border-radius:12px;max-width:320px;margin-bottom:8px}
+.demoPick{display:grid;gap:10px;width:100%;max-width:300px;margin-top:10px}
+.asesora-btn{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:13px;display:flex;align-items:center;gap:12px;color:var(--txt)}
+.asesora-btn:hover{border-color:var(--gold)}
+.asesora-btn .av{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;color:#10141a;font-size:14px;flex-shrink:0}
+
+/* HEADER */
+.hdr{position:sticky;top:0;z-index:30;background:rgba(14,17,22,.82);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);padding:14px 18px;display:flex;align-items:center;gap:12px}
+.hdr .brand{font-size:17px;letter-spacing:2px;font-weight:300}
+.hdr .brand b{font-weight:700;color:var(--gold)}
+.hdr .me{margin-left:auto;display:flex;align-items:center;gap:10px}
+.hdr .me .info{text-align:right;line-height:1.2}
+.hdr .me .info .n{font-size:13px;font-weight:600}
+.hdr .me .info .d{font-size:11px;color:var(--muted)}
+.hdr .me .av{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;color:#10141a;font-size:14px;background-size:cover;background-position:center}
+
+.demo-banner{background:rgba(115,169,240,.12);border:1px solid rgba(115,169,240,.3);color:var(--blue);font-size:12px;text-align:center;padding:8px;border-radius:10px;margin:10px 18px 0}
+
+/* HERO */
+.hero{padding:18px 18px 6px}
+.hello{font-size:21px;font-weight:700}
+.hello span{color:var(--gold2)}
+.subhello{color:var(--muted);font-size:13px;margin-top:2px}
+.dirfilter{margin-top:12px}
+.dirfilter select{width:100%;background:var(--panel);border:1px solid var(--line);color:var(--txt);border-radius:12px;padding:11px 14px;font-size:14px;appearance:none}
+.progress-card{margin:14px 0 4px;background:linear-gradient(135deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:20px;padding:18px;display:flex;align-items:center;gap:18px;box-shadow:var(--shadow)}
+.ring{position:relative;width:74px;height:74px;flex-shrink:0}
+.ring svg{transform:rotate(-90deg)}
+.ring .pct{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:17px}
+.progress-card .ptxt .pt{font-weight:600;font-size:15px}
+.progress-card .ptxt .ps{color:var(--muted);font-size:12.5px;margin-top:3px}
+
+/* KPIS */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;padding:14px 18px 4px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:11px 8px;text-align:center}
+.kpi .v{font-size:19px;font-weight:700}
+.kpi .l{font-size:10px;color:var(--muted);margin-top:2px;letter-spacing:.3px}
+.kpi.hot .v{color:var(--amber)} .kpi.due .v{color:var(--red)} .kpi.win .v{color:var(--green)}
+
+/* TABS */
+.tabs{display:flex;gap:8px;padding:14px 18px 6px;position:sticky;top:64px;z-index:20;background:linear-gradient(var(--bg),rgba(14,17,22,.6))}
+.tab{flex:1;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;color:var(--muted);font-size:13.5px;font-weight:600}
+.tab.active{background:var(--gold);color:#10141a;border-color:var(--gold)}
+.search{padding:4px 18px 0}
+.search input{width:100%;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:11px 14px;color:var(--txt);font-size:14px}
+
+/* CARDS */
+.list{padding:10px 18px 20px;display:flex;flex-direction:column;gap:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:var(--shadow);border-left:4px solid var(--gold);animation:rise .3s both}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.card .top{display:flex;align-items:flex-start;gap:10px}
+.card .nm{font-size:16px;font-weight:700}
+.card .proc{font-size:13px;color:var(--gold2);margin-top:2px}
+.card .badge{margin-left:auto;font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;white-space:nowrap}
+.b-seg{background:rgba(232,185,100,.16);color:var(--amber)}
+.b-venc{background:rgba(233,128,128,.16);color:var(--red)}
+.b-cerr{background:rgba(86,197,150,.16);color:var(--green)}
+.b-desc{background:rgba(139,151,167,.16);color:var(--muted)}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin:11px 0 4px}
+.chip{font-size:11.5px;color:var(--soft);background:var(--panel2);border:1px solid var(--line);border-radius:20px;padding:4px 10px;display:inline-flex;align-items:center;gap:5px}
+.chip b{color:var(--txt)}
+.dir-ase{font-size:11px;color:var(--purple);font-weight:600}
+.accion{font-size:12.5px;color:var(--blue);font-weight:600;margin:8px 0 0;display:flex;align-items:center;gap:7px}
+.msg{background:var(--bg2);border:1px solid var(--line);border-left:3px solid var(--green);border-radius:12px;padding:12px;margin-top:11px;font-size:13.5px;color:var(--soft);line-height:1.5}
+.row-actions{display:flex;gap:9px;margin-top:13px}
+.btn{flex:1;border-radius:12px;padding:12px;font-size:13.5px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:7px;transition:.15s}
+.btn:active{transform:scale(.97)}
+.btn.wa{background:#25D366;color:#06231a}
+.btn.copy{background:var(--panel2);color:var(--txt);border:1px solid var(--line)}
+.btn.done{background:var(--gold);color:#10141a}
+.btn.done.ok{background:var(--green);color:#06231a}
+.tools{display:flex;gap:9px;margin-top:10px}
+.tools select,.tools .pdfbtn{flex:1;background:var(--panel2);border:1px solid var(--line);color:var(--soft);border-radius:11px;padding:10px;font-size:12.5px;text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px;appearance:none}
+.notes{width:100%;margin-top:10px;background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:11px;padding:10px 12px;font-size:13px;resize:vertical;height:40px;font-family:inherit}
+
+.state{text-align:center;padding:60px 24px;color:var(--muted)}
+.state .ic{font-size:46px;margin-bottom:14px}
+.state h3{color:var(--txt);font-weight:700;font-size:18px;margin-bottom:6px}
+.spinner{width:40px;height:40px;border:3px solid var(--line);border-top-color:var(--gold);border-radius:50%;margin:0 auto 16px;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.botnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:560px;z-index:40;background:rgba(18,23,30,.92);backdrop-filter:blur(14px);border-top:1px solid var(--line);display:flex;padding:8px 10px 14px}
+.botnav a{flex:1;text-align:center;color:var(--muted);font-size:10.5px;display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px}
+.botnav a .bi{font-size:20px}
+.botnav a.active{color:var(--gold2)}
+
+.toast{position:fixed;bottom:96px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--gold);color:#10141a;font-weight:700;font-size:13.5px;padding:11px 20px;border-radius:30px;box-shadow:var(--shadow);opacity:0;transition:.3s;z-index:60;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:24px;z-index:70}
+.modal .box{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:22px;max-width:380px;width:100%}
+.modal h3{margin-bottom:6px}.modal p{color:var(--muted);font-size:13px;margin-bottom:14px}
+.modal label{font-size:12px;color:var(--muted);display:block;margin:10px 0 5px}
+.modal input{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:10px;font-size:13px}
+.modal .actions{display:flex;gap:10px;margin-top:18px}
+.modal .actions button{flex:1;border-radius:11px;padding:11px;font-weight:700;font-size:13.5px}
+.modal .save{background:var(--gold);color:#10141a}.modal .cancel{background:var(--panel2);color:var(--soft);border:1px solid var(--line)}
+</style>
 </head>
 <body>
 
-<!-- LOGIN -->
-<div id="login-screen" class="login-screen">
-  <div class="login-card">
-    <img src="logo_ms_black.png" alt="Dr. Miguel Soto" class="login-logo-img">
-    <div class="login-doc">Dr. Miguel Soto · Cirujano Plástico</div>
-    <h1 class="serif">Ventanilla de Cobros</h1>
-    <div class="login-sub">Inicia sesión con tu cuenta autorizada</div>
-    <div id="google-signin-btn"></div>
-    <div class="login-error" id="login-error"></div>
-    <div class="login-note">Solo cuentas autorizadas por el Dr. Soto pueden registrar cobros.</div>
-  </div>
+<!-- ============ LOGIN ============ -->
+<div class="login" id="login">
+  <div class="logo">NOVA<b>LYX</b></div>
+  <div class="tag">CRM · Seguimiento</div>
+  <h2>Inicia sesión</h2>
+  <p>Entra con tu cuenta de Google de Novalyx para ver tu seguimiento del día.</p>
+  <div id="gwarn" class="warn hidden">Falta configurar el Client ID de Google. Mientras tanto puedes ver la demostración.</div>
+  <div id="gbtn"></div>
+  <button class="demo" onclick="showDemoPick()">Ver demostración (sin conexión)</button>
+  <div class="demoPick hidden" id="demoPick"></div>
+  <button class="cfg" onclick="openConfig()">⚙ Configurar conexión</button>
 </div>
 
-<!-- APP -->
-<div id="app-wrapper" class="hidden">
-  <header class="topbar">
-    <span class="email" id="topbar-email">—</span>
-    <span style="opacity: 0.4;">·</span>
-    <button class="salir hidden" id="btn-facturas" onclick="abrirFacturas()">facturas pendientes</button>
-    <button class="salir hidden" id="btn-reportes" onclick="abrirReportes()">reportes</button>
-    <button class="salir hidden" id="btn-conciliacion" onclick="abrirConciliacion()">conciliación</button>
-    <button class="salir hidden" id="btn-corte" onclick="abrirCorte()">corte de caja</button>
-    <button class="salir hidden" id="btn-balance" onclick="abrirBalance()">balance deuda</button>
-    <button class="salir hidden" id="btn-volver-cobro" onclick="volverACobro()">← cobros</button>
-    <button class="salir" id="btn-salir">salir</button>
-  </header>
-
-  <div class="hero">
-    <div class="hero-left">
-      <div class="step-num">REGISTRO DE COBRO</div>
-      <div class="step-name" id="hero-step">Recepción</div>
-    </div>
-    <img src="logo_ms_white.png" alt="MS" class="hero-logo-img">
-    <div class="hero-right">
-      <div class="doc-name">Dr. Miguel Soto</div>
-      <div class="doc-title">Cirujano Plástico Certificado</div>
+<!-- ============ APP ============ -->
+<div class="app hidden" id="app">
+  <div class="hdr">
+    <div class="brand">NOVA<b>LYX</b></div>
+    <div class="me">
+      <div class="info"><div class="n" id="meName">—</div><div class="d" id="meDate">—</div></div>
+      <div class="av" id="meAv" onclick="logout()">—</div>
     </div>
   </div>
 
-  <main>
-    <!-- COBRO -->
-    <section id="view-cobro">
-      <h1 class="view-title serif">Registrar cobro</h1>
-      <div class="view-subtitle">Selecciona al paciente de la base</div>
+  <div id="demoBanner" class="demo-banner hidden">Modo demostración — datos de ejemplo</div>
 
-      <div class="card">
-        <div class="section-label serif">Paciente</div>
-        <div class="form-group">
-          <label class="lbl">Buscar por nombre</label>
-          <div class="buscador">
-            <input type="text" id="buscaPac" autocomplete="off" placeholder="Escribe el nombre y elige de la lista…">
-            <div id="resultados" class="resultados hidden"></div>
-          </div>
-          <div class="muted small" id="pacLibreLink" style="margin-top:6px;">
-            ¿Paciente externo de la Dra. Damián? <span class="link" style="cursor:pointer;" onclick="usarPacienteLibre()">Usar el nombre escrito tal cual →</span>
-          </div>
-          <div id="pacSel" class="pac-sel hidden">
-            <div>
-              <div id="pacNombre" class="pac-nombre"></div>
-              <div id="pacMeta" class="muted small"></div>
-              <span class="link" id="linkHistorial" style="font-size:0.8rem;cursor:pointer;" onclick="verHistorial()">Ver historial de pagos</span>
-            </div>
-            <button type="button" class="link" onclick="limpiarPaciente()">Cambiar</button>
-          </div>
-          <div id="histBox" class="hist-box hidden"></div>
-          <div id="pacNoExiste" class="aviso hidden">
-            ¿No aparece? Debe darse de alta primero en
-            <b>altapacientes.miguelsotomd.com</b>. No se puede cobrar a un paciente que no está en la base.
-          </div>
-        </div>
-
-        <div class="section-label serif">Método de pago general</div>
-        <div class="muted small" style="margin:-6px 0 10px;">Se aplica a todos los tratamientos. Cada uno puede sobrescribirlo al agregarlo.</div>
-        <div class="grid2">
-          <div class="form-group"><label class="lbl">Método de pago</label><select id="metodo"></select></div>
-          <div class="form-group" id="grupoTerminal"><label class="lbl">Terminal / cuenta</label><select id="terminal"></select></div>
-        </div>
-        <div class="grid2">
-          <div class="form-group"><label class="lbl">Moneda</label><select id="moneda"></select></div>
-          <div class="form-group hidden" id="boxTC"><label class="lbl">Tipo de cambio</label><input type="number" id="tc" min="0" step="0.0001" inputmode="decimal" placeholder="0.0000"></div>
-        </div>
-
-        <div class="section-label serif">Agregar tratamiento</div>
-        <div class="grid2">
-          <div class="form-group"><label class="lbl">Línea de negocio</label><select id="linea"></select></div>
-          <div class="form-group" id="grupoTratamiento" style="position:relative;">
-            <label class="lbl">Tratamiento / concepto</label>
-            <input type="text" id="tratamiento" placeholder="Escribe 2-3 letras…" autocomplete="off">
-            <div id="tratResultados" class="trat-resultados hidden"></div>
-          </div>
-        </div>
-        <div class="form-group hidden" id="cotizacionBox">
-          <label class="lbl">Cotización aceptada (obligatoria para cirugía)</label>
-          <select id="cotizacionSel"></select>
-          <div id="cotizacionInfo" class="muted small" style="margin-top:6px;"></div>
-          <div id="cotizacionSaldo" class="hidden" style="margin-top:8px;background:var(--bg-soft);border:1px solid var(--border-soft);border-radius:4px;padding:10px 14px;"></div>
-          <div id="cotizacionAcciones" class="hidden" style="margin-top:8px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
-            <label style="margin:0;font-size:0.85rem;cursor:pointer;">
-              <input type="checkbox" id="liquidarSplit" style="width:auto;margin-right:6px;vertical-align:middle;">
-              Liquidar el saldo con split (honorarios→Dr / bucket→Renasté)
-            </label>
-            <button type="button" class="link" onclick="abrirEstadoCuenta()">Ver estado de cuenta</button>
-          </div>
-        </div>
-        <div class="grid2">
-          <div class="form-group" id="grupoPrecioLista"><label class="lbl">Precio de lista</label><input type="number" id="precioLista" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></div>
-          <div class="form-group"><label class="lbl" id="lblMonto">Monto a cobrar</label><input type="number" id="monto" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></div>
-        </div>
-        <div class="grid2" id="grupoDescuentos">
-          <div class="form-group"><label class="lbl">Descuento %</label><input type="number" id="descuento" min="0" max="100" step="1" inputmode="decimal" placeholder="0"></div>
-          <div class="form-group"><label class="lbl">Descuento $ (monto fijo)</label><input type="number" id="descuentoMonto" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></div>
-        </div>
-        <div class="form-group hidden" id="boxAutoriza"><label class="lbl">¿Quién autoriza el descuento?</label><input type="text" id="autorizaDesc" placeholder="Nombre de quien autoriza"></div>
-        <div class="form-group"><label class="lbl">Condición de pago de este tratamiento</label><select id="condicion"></select></div>
-        <div id="previewMXN" class="preview-mxn hidden"></div>
-
-        <div class="form-group">
-          <label class="lbl"><input type="checkbox" id="pagoDistinto" style="width:auto;margin-right:6px;vertical-align:middle;">Este tratamiento se pagó con otro método</label>
-        </div>
-        <div id="boxPagoTrat" class="hidden">
-          <div class="grid3">
-            <div class="form-group"><label class="lbl">Método</label><select id="metodoTrat"></select></div>
-            <div class="form-group" id="grupoTerminalTrat"><label class="lbl">Terminal</label><select id="terminalTrat"></select></div>
-            <div class="form-group"><label class="lbl">Moneda</label><select id="monedaTrat"></select></div>
-          </div>
-        </div>
-
-        <button class="btn btn-secondary" id="btnAgregar" onclick="agregarTratamiento()" style="margin-top:0;">+ Agregar a la lista</button>
-
-        <div class="section-label serif">Tratamientos a cobrar</div>
-        <div id="carritoVacio" class="muted small" style="margin-bottom:10px;">Aún no has agregado tratamientos.</div>
-        <div id="carritoLista"></div>
-        <div id="carritoTotal" class="hidden" style="text-align:right;font-weight:600;font-size:1.05rem;margin:10px 0;"></div>
-
-        <div id="seccionDatosGenerales">
-          <div class="section-label serif">Datos generales</div>
-          <div class="grid2">
-            <div class="form-group"><label class="lbl">Médico titular</label><select id="medico"></select></div>
-            <div class="form-group"><label class="lbl">Operativo / quién atendió</label><select id="operativo"></select></div>
-          </div>
-          <div class="grid2">
-            <div class="form-group"><label class="lbl">Prospecta</label><select id="prospecta"></select></div>
-            <div class="form-group"><label class="lbl">Cierra</label><select id="cierra"></select></div>
-          </div>
-        </div>
-
-        <div id="seccionFacturacion">
-          <div class="section-label serif">Facturación</div>
-          <div class="grid2">
-            <div class="form-group"><label class="lbl">¿Factura?</label><select id="factura"><option>No</option><option>Sí</option></select></div>
-            <div class="form-group hidden" id="boxNumFactura"><label class="lbl">No. de factura</label><input type="text" id="numFactura" placeholder="Folio fiscal / número"></div>
-          </div>
-        </div>
-
-        <div class="form-group"><label class="lbl">Observaciones</label><input type="text" id="obs" placeholder="Notas del cobro"></div>
-
-        <button class="btn btn-primary" id="btnCobrar" onclick="enviarCobro()">Registrar cobro</button>
-        <div id="msg" class="alert alert-error hidden"></div>
+  <div class="hero">
+    <div class="hello">Hola, <span id="firstName">—</span> 🌷</div>
+    <div class="subhello" id="heroSub">Tu seguimiento de hoy</div>
+    <div class="dirfilter hidden" id="dirFilter">
+      <select id="dirSelect" onchange="render()"><option value="">Todas las asesoras</option></select>
+    </div>
+    <div class="progress-card">
+      <div class="ring">
+        <svg width="74" height="74"><circle cx="37" cy="37" r="32" stroke="#2a323d" stroke-width="7" fill="none"/>
+          <circle id="ringFill" cx="37" cy="37" r="32" stroke="url(#g)" stroke-width="7" fill="none" stroke-linecap="round" stroke-dasharray="201" stroke-dashoffset="201"/>
+          <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c9a96a"/><stop offset="1" stop-color="#e09bb4"/></linearGradient></defs>
+        </svg>
+        <div class="pct" id="ringPct">0%</div>
       </div>
-    </section>
+      <div class="ptxt"><div class="pt" id="progTitle">Cargando…</div><div class="ps" id="progSub">Preparando tu día</div></div>
+    </div>
+  </div>
 
-    <!-- RECIBO -->
-    <section id="view-recibo" class="hidden">
-      <div class="exito-banner noprint">✓ Cobro registrado exitosamente</div>
-      <h1 class="view-title serif noprint">Cobro registrado</h1>
-      <div class="view-subtitle noprint">Entrega este comprobante al paciente</div>
-      <div class="card noprint hidden" id="repartoCard" style="margin-bottom:16px;">
-        <div id="repartoArea"></div>
-      </div>
-      <div class="card noprint hidden" id="comprobantesCard" style="margin-bottom:16px;">
-        <div style="font-weight:600;margin-bottom:4px;">📎 Comprobantes de pago</div>
-        <div class="muted small" id="comprobantesNota" style="margin-bottom:10px;">Adjunta la evidencia de cada pago. Quedan ligados al folio para la conciliación.</div>
-        <div id="comprobantesArea"></div>
-        <div class="acciones" style="margin-top:6px;">
-          <button class="btn btn-primary" id="btnSubirComprobantes" style="width:auto;margin-top:0;" onclick="subirComprobantes()">Subir comprobantes</button>
-        </div>
-        <div class="muted small" id="comprobantesMsg" style="margin-top:8px;"></div>
-      </div>
-      <div class="card">
-        <div id="reciboArea"></div>
-        <div class="acciones noprint">
-          <button class="btn btn-secondary" onclick="imprimir()">🖨 Imprimir recibo</button>
-          <button class="btn btn-primary" id="btnNuevoCobro" style="width:auto;margin-top:0;" onclick="nuevoCobro()" disabled>Nuevo cobro</button>
-        </div>
-        <div class="muted small noprint" id="avisoImprimir" style="margin-top:8px;">Debes imprimir el recibo antes de continuar al siguiente cobro.</div>
-      </div>
-    </section>
+  <div class="kpis">
+    <div class="kpi hot"><div class="v" id="kHoy">0</div><div class="l">Hoy</div></div>
+    <div class="kpi"><div class="v" id="kSeg">0</div><div class="l">En seg.</div></div>
+    <div class="kpi due"><div class="v" id="kVenc">0</div><div class="l">Vencidas</div></div>
+    <div class="kpi win"><div class="v" id="kCerr">0</div><div class="l">Cierres</div></div>
+  </div>
 
-    <!-- FACTURAS PENDIENTES -->
-    <section id="view-facturas" class="hidden">
-      <h1 class="view-title serif">Facturas pendientes</h1>
-      <div class="view-subtitle">Cobros marcados con factura que aún no tienen número</div>
-      <div class="card">
-        <div id="facturasLista"></div>
-      </div>
-    </section>
+  <div class="tabs">
+    <button class="tab active" id="tabDia" onclick="setTab('dia')">Mi día</button>
+    <button class="tab" id="tabTodas" onclick="setTab('todas')">Pacientes</button>
+  </div>
+  <div class="search hidden" id="searchWrap"><input id="searchInput" placeholder="🔍 Buscar paciente o procedimiento" oninput="render()"></div>
+  <div class="list" id="list"></div>
+</div>
 
-    <!-- ESTADO DE CUENTA -->
-    <section id="view-estado" class="hidden">
-      <h1 class="view-title serif noprint">Estado de cuenta</h1>
-      <div class="view-subtitle noprint">Resumen de pagos de la paciente</div>
-      <div class="card">
-        <div id="estadoArea"></div>
-        <div class="acciones noprint">
-          <button class="btn btn-secondary" onclick="imprimirEstado()">🖨 Imprimir / Guardar PDF</button>
-          <button class="btn btn-secondary" id="btnEnviarCorreo" onclick="enviarEstadoCorreo(this)">✉ Enviar por correo</button>
-          <button class="btn btn-primary" style="width:auto;margin-top:0;" onclick="volverDeEstado()">← Volver al cobro</button>
-        </div>
-        <div id="estadoMsg" class="muted small noprint" style="text-align:center;margin-top:8px;"></div>
-      </div>
-    </section>
+<div class="botnav hidden" id="botnav">
+  <a class="active" id="nDia" onclick="setTab('dia')"><span class="bi">☀</span>Mi día</a>
+  <a id="nTodas" onclick="setTab('todas')"><span class="bi">❤</span>Pacientes</a>
+  <a onclick="reload()"><span class="bi">↻</span>Actualizar</a>
+  <a onclick="logout()"><span class="bi">⇄</span>Salir</a>
+</div>
 
-    <!-- REPORTES -->
-    <section id="view-reportes" class="hidden">
-      <h1 class="view-title serif noprint">Reportes</h1>
-      <div class="view-subtitle noprint">Detalle diario, semanal y mensual · desglose por entidad, caja y método</div>
-      <div class="card noprint">
-        <div class="rep-tabs" style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
-          <button class="btn btn-secondary rep-tab" data-rep="dia" style="width:auto;margin-top:0;" onclick="repTab('dia')">Diario</button>
-          <button class="btn btn-secondary rep-tab" data-rep="semana" style="width:auto;margin-top:0;" onclick="repTab('semana')">Semanal</button>
-          <button class="btn btn-secondary rep-tab" data-rep="mes" style="width:auto;margin-top:0;" onclick="repTab('mes')">Mensual</button>
-        </div>
-        <div id="repCtrlDia" class="grid2">
-          <div class="form-group"><label class="lbl">Fecha</label><input type="date" id="repFecha"></div>
-        </div>
-        <div id="repCtrlRango" class="grid2 hidden">
-          <div class="form-group"><label class="lbl">Desde</label><input type="date" id="repDesde"></div>
-          <div class="form-group"><label class="lbl">Hasta</label><input type="date" id="repHasta"></div>
-        </div>
-        <div class="acciones" style="margin-top:4px;">
-          <button class="btn btn-primary" id="btnGenerarRep" style="width:auto;margin-top:0;" onclick="generarReporte()">Generar reporte</button>
-          <button class="btn btn-secondary" style="width:auto;margin-top:0;" onclick="imprimirReporte()">🖨 Imprimir / PDF</button>
-        </div>
-        <div class="muted small" id="repMsg" style="margin-top:8px;"></div>
-      </div>
-      <div class="card" id="repResultadoCard" style="display:none;">
-        <div id="repResultado"></div>
-      </div>
-    </section>
+<div class="toast" id="toast"></div>
 
-    <!-- CONCILIACIÓN -->
-    <section id="view-conciliacion" class="hidden">
-      <h1 class="view-title serif noprint">Conciliación bancaria</h1>
-      <div class="view-subtitle noprint">Compara lo registrado vs. el reporte del banco · adjunta el PDF del banco</div>
-      <div class="card noprint">
-        <div class="grid2">
-          <div class="form-group"><label class="lbl">Fecha a conciliar</label><input type="date" id="concFecha"></div>
-          <div class="form-group"><label class="lbl">PDF del banco (del día siguiente)</label><input type="file" id="concPdf" accept="application/pdf,image/*"></div>
-        </div>
-        <div class="acciones" style="margin-top:4px;">
-          <button class="btn btn-primary" id="btnCargarConc" style="width:auto;margin-top:0;" onclick="cargarConciliacion()">Cargar día</button>
-        </div>
-        <div class="muted small" id="concMsg" style="margin-top:8px;"></div>
-      </div>
-      <div class="card" id="concResultadoCard" style="display:none;">
-        <div id="concResultado"></div>
-        <div class="acciones noprint" style="margin-top:10px;">
-          <button class="btn btn-primary" id="btnGuardarConc" style="width:auto;margin-top:0;" onclick="guardarConciliacion()">Guardar conciliación</button>
-          <button class="btn btn-secondary" style="width:auto;margin-top:0;" onclick="imprimirReporte()">🖨 Imprimir / PDF</button>
-        </div>
-      </div>
-    </section>
-
-    <!-- CORTE DE EFECTIVO -->
-    <section id="view-corte" class="hidden">
-      <h1 class="view-title serif noprint">Corte de caja (efectivo)</h1>
-      <div class="view-subtitle noprint">Todo el efectivo pendiente desde el último corte · firma de contraentrega del Dr.</div>
-      <div class="card">
-        <div id="corteArea"></div>
-      </div>
-      <div class="card noprint" id="corteFirmaBox" style="display:none;">
-        <div style="font-weight:600;margin-bottom:4px;">🧾 Entrega de efectivo</div>
-        <div class="muted small" style="margin-bottom:10px;">Paso 1: imprime el recibo. Paso 2: el Dr. lo firma al recibir el efectivo. Paso 3: sube o toma foto del recibo firmado y registra el corte.</div>
-        <div class="acciones" style="margin-top:0;margin-bottom:12px;">
-          <button class="btn btn-secondary" style="width:auto;margin-top:0;" onclick="imprimirReciboEntrega()">🖨 Imprimir recibo de entrega</button>
-        </div>
-        <div style="font-weight:600;margin-bottom:4px;">✍️ Recibo firmado por el Dr. Miguel Soto</div>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-          <input type="file" id="corteFirmaFile" accept="image/*,application/pdf" capture="environment" onchange="document.getElementById('corte-cam-firma').textContent='';">
-          <button type="button" class="btn btn-secondary" style="width:auto;margin-top:0;padding:6px 12px;" onclick="tomarFotoFirma()">📷 Tomar foto</button>
-          <span class="muted small" id="corte-cam-firma"></span>
-        </div>
-        <div class="form-group" style="margin-top:10px;"><label class="lbl">Observaciones (opcional)</label><input type="text" id="corteObs" placeholder="Notas del corte"></div>
-        <div class="acciones" style="margin-top:4px;">
-          <button class="btn btn-primary" id="btnRegistrarCorte" style="width:auto;margin-top:0;" onclick="registrarCorte()">Registrar corte</button>
-        </div>
-        <div class="muted small" id="corteMsg" style="margin-top:8px;"></div>
-      </div>
-      <div class="card noprint" id="corteSinPend" style="display:none;">
-        <div class="muted">No hay efectivo pendiente de corte. 🎉</div>
-      </div>
-    </section>
-
-    <!-- BALANCE DE DEUDA Dr <-> Renasté -->
-    <section id="view-balance" class="hidden">
-      <h1 class="view-title serif noprint">Balance de deuda · Dr. Miguel Soto ↔ Renasté</h1>
-      <div class="view-subtitle noprint">Neto de las deudas entre ambas entidades · saldar a cero cuando se liquide</div>
-      <div class="card">
-        <div id="balanceArea"></div>
-      </div>
-      <div class="card noprint" id="balanceSaldarBox" style="display:none;">
-        <div style="font-weight:600;margin-bottom:4px;">Saldar el balance a cero</div>
-        <div class="muted small" style="margin-bottom:10px;">Al saldar, todas las deudas pendientes se marcan como liquidadas y el balance vuelve a cero. Queda registrado en el historial.</div>
-        <div class="form-group"><label class="lbl">Nota (cómo se saldó: transferencia, efectivo, etc.)</label><input type="text" id="balanceNota" placeholder="Ej. Transferencia de Renasté al Dr. por el neto"></div>
-        <div class="acciones" style="margin-top:4px;">
-          <button class="btn btn-primary" id="btnSaldarBalance" style="width:auto;margin-top:0;" onclick="saldarBalance()">Saldar a cero</button>
-        </div>
-        <div class="muted small" id="balanceMsg" style="margin-top:8px;"></div>
-      </div>
-      <div class="card noprint" id="balanceSinDeuda" style="display:none;">
-        <div class="muted">El balance está en cero. No hay deudas pendientes entre las entidades. 🎉</div>
-      </div>
-    </section>
-  </main>
+<div class="modal hidden" id="configModal">
+  <div class="box">
+    <h3>Conexión con el motor</h3>
+    <p>Pega la URL del Web App de Apps Script y el Client ID de Google. Si los dejas vacíos, verás el modo demo.</p>
+    <label>URL del Web App (/exec)</label><input id="cfgUrl" placeholder="https://script.google.com/macros/s/.../exec">
+    <label>Google Client ID</label><input id="cfgClient" placeholder="....apps.googleusercontent.com">
+    <div class="actions"><button class="cancel" onclick="closeConfig()">Cancelar</button><button class="save" onclick="saveConfig()">Guardar</button></div>
+  </div>
 </div>
 
 <script>
-// ============================================================
-// CONFIG — confirma estas dos líneas antes de publicar
-// ============================================================
-const API_URL = 'https://script.google.com/macros/s/AKfycbw7g9OMUl2fj1MPVbzR-lmgo57befXHvML6vLwKbupNRK3c1lNgP1mqH2lkXqX5yHY6Jw/exec';
-const CLIENT_ID = '853020443669-kqupvoouc7721osm7b3tj67d42ofpdnn.apps.googleusercontent.com';
+// ============ CONFIG ============
+// Rellena estos dos o usa el botón ⚙. Si quedan vacíos, corre en DEMO.
+let API_URL   = localStorage.getItem('nvx_api_url')   || "";   // https://script.google.com/macros/s/XXXX/exec
+let GOOGLE_CLIENT_ID = localStorage.getItem('nvx_client_id') || "";  // ....apps.googleusercontent.com
 
-// ============================================================
-// STATE
-// ============================================================
-let googleToken = localStorage.getItem('vc_token') || '';
-let userEmail = '';
-let catalogos = {};
-let PAC = null;
-let PRECIOS = [];
-let tratSel = -1;
-let CARRITO = [];
-let TRAT_ELEGIDO = null; // tratamiento seleccionado de la lista (estricto)
-let COT_ELEGIDA = null; // cotización aceptada elegida (cirugía)
-let COTIZACIONES_PAC = []; // cotizaciones aceptadas del paciente actual
-let ESTADO_ACTUAL = null; // último estado de cuenta cargado (para compartir)
-let DATOS_BLOQUEADOS = false; // datos generales bloqueados (abono de una cotización con pagos previos)
-let BUSCANDO = null;
-let ENVIANDO = false;
-
-const $ = id => document.getElementById(id);
-const show = id => $(id).classList.remove('hidden');
-const hide = id => $(id).classList.add('hidden');
-
-// Efectivo: no se pregunta terminal; el efectivo entra completo a la Caja Dr. Miguel Soto
-function aplicaEfectivoTerminal() {
-  if ($('metodo').value === 'Efectivo') { $('terminal').value = 'Efectivo Dr.'; hide('grupoTerminal'); }
-  else { show('grupoTerminal'); }
-}
-function aplicaEfectivoTerminalTrat() {
-  if ($('metodoTrat').value === 'Efectivo') { $('terminalTrat').value = 'Efectivo Dr.'; hide('grupoTerminalTrat'); }
-  else { show('grupoTerminalTrat'); }
-}
-
-function decodeJWT(token) {
-  try {
-    const payload = token.split('.')[1];
-    const decoded = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
-    return JSON.parse(decodeURIComponent(escape(decoded)));
-  } catch (e) { return null; }
-}
-
-async function callAPI(action, payload = {}) {
-  if (!googleToken) return { ok: false, error: 'No hay sesión activa' };
-  const body = JSON.stringify({ token: googleToken, action, ...payload });
-  try {
-    const res = await fetch(API_URL, {
-      method: 'POST',
-      redirect: 'follow',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body
-    });
-    const txt = await res.text();
-    let parsed;
-    try { parsed = JSON.parse(txt); }
-    catch (parseErr) { return { ok: false, error: 'Respuesta inesperada del servidor. Verifica el despliegue.' }; }
-    // Sesión de Google vencida → en vez del "Token inválido" crudo, regresa al login con mensaje claro
-    if (parsed && parsed.ok === false && _esErrorSesion(parsed.error)) {
-      _sesionExpirada();
-      return { ok: false, error: 'Tu sesión expiró. Vuelve a iniciar sesión.' };
-    }
-    return parsed;
-  } catch (err) {
-    return { ok: false, error: 'Conexión fallida: ' + err.message };
-  }
-}
-
-// ¿El error del backend es por token/sesión vencida?
-function _esErrorSesion(err) {
-  var e = String(err || '').toLowerCase();
-  return e.indexOf('token inv') >= 0 || e.indexOf('no hay sesi') >= 0 ||
-         e.indexOf('token sin email') >= 0 || e.indexOf('token:') >= 0;
-}
-// Regresa al login con un mensaje claro y reactiva el botón de Google
-var _sesionExpiradaAvisada = false;
-function _sesionExpirada() {
-  if (_sesionExpiradaAvisada) return;
-  _sesionExpiradaAvisada = true;
-  try { localStorage.removeItem('vc_token'); } catch (e) {}
-  googleToken = '';
-  hide('app-wrapper'); show('login-screen');
-  var le = $('login-error');
-  if (le) le.textContent = 'Tu sesión expiró por seguridad. Vuelve a iniciar sesión con Google para continuar (no se pierde nada).';
-  try { initGoogleSignIn(); } catch (e) {}
-  window.scrollTo(0, 0);
-}
-
-function escapeHtml(s) {
-  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
-}
-function fill(id, arr) {
-  $(id).innerHTML = '<option value="">— elegir —</option>' + arr.map(x => '<option>' + escapeHtml(x) + '</option>').join('');
-}
-
-// ============================================================
-// GOOGLE SIGN-IN
-// ============================================================
-window.handleGoogleSignIn = async function (response) {
-  googleToken = response.credential;
-  const payload = decodeJWT(googleToken);
-  if (!payload || !payload.email) { $('login-error').textContent = 'Error procesando tu sesión Google'; return; }
-  userEmail = payload.email;
-  $('login-error').textContent = 'Verificando autorización…';
-  const res = await callAPI('catalogos');
-  if (!res.ok) {
-    $('login-error').textContent = res.error || 'Error de conexión';
-    googleToken = '';
-    return;
-  }
-  catalogos = res.data;
-  localStorage.setItem('vc_token', googleToken);
-  initApp();
+const ASESORAS = ['Claudia Falcón','Susana Palacios','Anahí Alvarado','Valeria Lima'];
+const AV_COLORS = {
+  'Claudia Falcón':'linear-gradient(135deg,#c9a96a,#e09bb4)','Susana Palacios':'linear-gradient(135deg,#5fc6c0,#73a9f0)',
+  'Anahí Alvarado':'linear-gradient(135deg,#e09bb4,#b58cf0)','Valeria Lima':'linear-gradient(135deg,#56c596,#c9a96a)','Director':'linear-gradient(135deg,#c9a96a,#73a9f0)'
 };
+const MOTIVOS = ['Precio','Miedo / dudas','Comparando','Decisión con terceros','Tiempos'];
+let state = { idToken:null, email:null, nombre:null, picture:null, rol:'asesora', asesora:null, rows:[], tab:'dia', demo:false };
 
-function initGoogleSignIn() {
-  if (!window.google || !google.accounts || !google.accounts.id) { setTimeout(initGoogleSignIn, 200); return; }
-  google.accounts.id.initialize({
-    client_id: CLIENT_ID,
-    callback: window.handleGoogleSignIn,
-    auto_select: false,
-    cancel_on_tap_outside: false,
-    use_fedcm_for_prompt: true,
-    use_fedcm_for_button: true,
-    itp_support: true
-  });
-  google.accounts.id.renderButton($('google-signin-btn'), { theme: 'outline', size: 'large', text: 'signin_with', shape: 'pill', locale: 'es' });
+// ============ ARRANQUE ============
+window.onload = function(){
+  // intento de sesión recordada (demo)
+  const demoName = localStorage.getItem('nvx_demo_asesora');
+  if(demoName){ enterDemo(demoName); return; }
+  initGoogle();
+};
+function initGoogle(){
+  if(!GOOGLE_CLIENT_ID){ document.getElementById('gwarn').classList.remove('hidden'); return; }
+  const tryInit = setInterval(function(){
+    if(window.google && google.accounts && google.accounts.id){
+      clearInterval(tryInit);
+      google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onCredential, auto_select:true });
+      google.accounts.id.renderButton(document.getElementById('gbtn'),
+        { theme:'filled_black', size:'large', shape:'pill', text:'signin_with', locale:'es', width:280 });
+      google.accounts.id.prompt();
+    }
+  }, 120);
+}
+function parseJwt(t){
+  try{ return JSON.parse(decodeURIComponent(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')).split('').map(c=>'%'+('00'+c.charCodeAt(0).toString(16)).slice(-2)).join(''))); }
+  catch(e){ return {}; }
+}
+function onCredential(resp){
+  const jwt = parseJwt(resp.credential);
+  state.idToken = resp.credential;
+  state.email = jwt.email; state.nombre = jwt.name || jwt.email; state.picture = jwt.picture;
+  enterApp();
+  reload();
 }
 
-function logout() {
-  if (window.google && google.accounts && google.accounts.id) google.accounts.id.disableAutoSelect();
-  googleToken = '';
-  localStorage.removeItem('vc_token');
+// ============ DEMO ============
+function showDemoPick(){
+  const d = document.getElementById('demoPick');
+  d.classList.toggle('hidden');
+  d.innerHTML = ['Director'].concat(ASESORAS).map(a=>{
+    const ini = a==='Director'?'MS':a.split(' ').map(x=>x[0]).slice(0,2).join('');
+    return `<button class="asesora-btn" onclick="enterDemo('${a}')"><div class="av" style="background:${AV_COLORS[a]}">${ini}</div><div style="text-align:left"><div style="font-weight:600">${a}</div></div></button>`;
+  }).join('');
+}
+function enterDemo(name){
+  state.demo = true;
+  localStorage.setItem('nvx_demo_asesora', name);
+  state.rol = (name==='Director')?'director':'asesora';
+  state.asesora = (name==='Director')?null:name;
+  state.nombre = name; state.email='demo@novalyx';
+  enterApp(); reload();
+}
+
+// ============ ENTRAR ============
+function enterApp(){
+  document.getElementById('login').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  document.getElementById('botnav').classList.remove('hidden');
+  const nombre = state.nombre||'';
+  document.getElementById('meName').textContent = nombre;
+  document.getElementById('firstName').textContent = nombre.split(' ')[0];
+  const av = document.getElementById('meAv');
+  if(state.picture){ av.style.backgroundImage='url('+state.picture+')'; av.textContent=''; }
+  else { av.textContent = nombre.split(' ').map(x=>x[0]).slice(0,2).join(''); av.style.background = AV_COLORS[state.asesora]||AV_COLORS['Director']; }
+  const d=new Date(); document.getElementById('meDate').textContent = d.toLocaleDateString('es-MX',{weekday:'short',day:'numeric',month:'short'});
+}
+function logout(){
+  if(window.google && google.accounts && google.accounts.id) google.accounts.id.disableAutoSelect();
+  localStorage.removeItem('nvx_demo_asesora');
   location.reload();
 }
-$('btn-salir').addEventListener('click', logout);
 
-// ============================================================
-// INIT
-// ============================================================
-function initApp() {
-  _sesionExpiradaAvisada = false;
-  hide('login-screen');
-  show('app-wrapper');
-  $('topbar-email').textContent = catalogos.usuario ? catalogos.usuario.email : userEmail;
-  fill('linea', catalogos.lineas);
-  fill('metodo', catalogos.metodos);
-  fill('terminal', catalogos.terminales);
-  fill('moneda', catalogos.monedas);
-  fill('metodoTrat', catalogos.metodos);
-  fill('terminalTrat', catalogos.terminales);
-  fill('monedaTrat', catalogos.monedas);
-  fill('medico', catalogos.medicos);
-  fill('operativo', catalogos.medicos);
-  fill('prospecta', catalogos.asesores.concat(['No Aplica']));
-  fill('cierra', catalogos.asesores.concat(['No Aplica']));
-  fill('condicion', catalogos.condiciones);
-  // Cortesía: monto $0 automático, método "Cortesía / No aplica", exige autorizador
-  $('condicion').addEventListener('change', function() {
-    if (this.value === 'Cortesía') aplicarCortesia();
-    else quitarCortesia();
-  });
-  $('factura').addEventListener('change', function() {
-    if (this.value === 'Sí') show('boxNumFactura'); else hide('boxNumFactura');
-  });
-  $('pagoDistinto').addEventListener('change', function() {
-    if (this.checked) show('boxPagoTrat'); else hide('boxPagoTrat');
-  });
-  // Efectivo: no se pregunta terminal (es obvio); se fija a "Efectivo (No aplica)"
-  $('metodo').addEventListener('change', aplicaEfectivoTerminal);
-  $('metodoTrat').addEventListener('change', aplicaEfectivoTerminalTrat);
-  // Al cambiar de línea, se limpia el tratamiento elegido (el filtro cambia)
-  $('linea').addEventListener('change', function() {
-    $('tratamiento').value = '';
-    $('precioLista').value = '';
-    $('tratamiento').readOnly = false;
-    TRAT_ELEGIDO = null;
-    COT_ELEGIDA = null;
-    hide('tratResultados');
-    if (this.value === 'Cirugía') {
-      // Cirugía: se cobra contra una cotización aceptada, no por búsqueda de tratamiento
-      hide('grupoTratamiento');
-      // En cirugía, médico titular y operativo son SIEMPRE el Dr. Miguel Soto (no cambia)
-      $('medico').value = 'Dr. Miguel Soto'; $('medico').disabled = true;
-      $('operativo').value = 'Dr. Miguel Soto'; $('operativo').disabled = true;
-      cargarCotizaciones();
-    } else {
-      show('grupoTratamiento');
-      DATOS_BLOQUEADOS = false;
-      ['medico', 'operativo', 'prospecta', 'cierra'].forEach(id => { $(id).disabled = false; });
-      hide('cotizacionBox');
-      hide('cotizacionSaldo');
-      hide('cotizacionAcciones');
-      $('cotizacionInfo').textContent = '';
-    }
-    // Dra. Damián: no usa lista de precios ni datos generales/facturación → forma simplificada
-    if (_esLineaDamian(this.value)) {
-      hide('grupoPrecioLista'); hide('grupoDescuentos'); hide('boxAutoriza');
-      hide('seccionDatosGenerales'); hide('seccionFacturacion');
-      $('descuento').value = ''; $('descuentoMonto').value = '';
-    } else {
-      show('grupoPrecioLista'); show('grupoDescuentos');
-      show('seccionDatosGenerales'); show('seccionFacturacion');
-    }
-  });
-  $('cotizacionSel').addEventListener('change', onElegirCotizacion);
-  $('liquidarSplit').addEventListener('change', function() {
-    if (this.checked && COT_ELEGIDA) {
-      // Liquidación: el monto es el saldo completo y la condición es "Liquidación" (no se pregunta)
-      const saldo = (COT_ELEGIDA.saldoPendiente != null) ? COT_ELEGIDA.saldoPendiente : COT_ELEGIDA.granTotal;
-      $('monto').value = saldo;
-      $('condicion').value = 'Liquidación';
-      $('condicion').disabled = true;
-    } else {
-      // Anticipo/abono: recepción captura el monto; condición vuelve a "Anticipo"
-      $('monto').value = '';
-      $('condicion').disabled = false;
-      if ($('condicion').value === 'Liquidación') $('condicion').value = 'Anticipo';
-    }
-  });
-  // Al corregir un campo marcado en rojo, se le quita el resaltado
-  ['linea','tratamiento','monto','metodo','terminal','moneda','metodoTrat','terminalTrat','monedaTrat','medico','condicion','tc','buscaPac','autorizaDesc'].forEach(id => {
-    const el = $(id);
-    if (el) ['input','change'].forEach(ev => el.addEventListener(ev, () => {
-      const g = el.closest('.form-group') || el;
-      g.classList.remove('campo-error'); el.classList.remove('campo-error');
-    }));
-  });
-  $('buscaPac').addEventListener('input', onBuscar);
-  $('moneda').addEventListener('change', onMoneda);
-  ['monto', 'tc'].forEach(id => $(id).addEventListener('input', previewMXN));
-
-  // Lista de precios viva + buscador inteligente
-  PRECIOS = catalogos.precios || [];
-  $('tratamiento').addEventListener('input', onBuscarTrat);
-  $('tratamiento').addEventListener('keydown', onTratKeydown);
-  $('tratamiento').addEventListener('blur', () => setTimeout(() => hide('tratResultados'), 200));
-  // Recalcular monto cuando cambia precio de lista o descuento
-  $('precioLista').addEventListener('input', calcularMonto);
-  // Descuento: % O monto fijo, nunca ambos. Al usar uno, se bloquea el otro.
-  $('descuento').addEventListener('input', function() {
-    const hayPct = this.value !== '' && parseFloat(this.value) > 0;
-    $('descuentoMonto').disabled = hayPct;
-    if (hayPct) $('descuentoMonto').value = '';
-    calcularMonto();
-  });
-  $('descuentoMonto').addEventListener('input', function() {
-    const hayMonto = this.value !== '' && parseFloat(this.value) > 0;
-    $('descuento').disabled = hayMonto;
-    if (hayMonto) $('descuento').value = '';
-    calcularMonto();
-  });
-
-  // Solo admin/facturación ve el botón de facturas pendientes
-  const rol = catalogos.usuario && catalogos.usuario.rol ? catalogos.usuario.rol : 'cobros';
-  if (rol === 'admin' || rol === 'facturacion' || rol === 'facturación') {
-    show('btn-facturas');
-    show('btn-reportes');
-    show('btn-conciliacion');
-    show('btn-corte');
-    show('btn-balance');
+// ============ DATOS ============
+async function reload(){
+  showLoading();
+  if(state.demo){
+    document.getElementById('demoBanner').classList.remove('hidden');
+    state.rows = demoRows();
+    afterData(); return;
+  }
+  if(!API_URL){ document.getElementById('list').innerHTML=`<div class="state"><div class="ic">⚙️</div><h3>Falta conectar</h3><p>Configura la URL del Web App en ⚙.</p></div>`; return; }
+  try{
+    const j = await apiPost({action:'data'});
+    if(!j.ok){ if(j.auth){ toast('Sesión expirada, vuelve a entrar'); setTimeout(logout,1200); } throw new Error(j.error||'Error'); }
+    state.rol = j.rol; state.asesora = j.asesora; state.nombre = j.nombre||state.nombre;
+    document.getElementById('meName').textContent = state.nombre;
+    document.getElementById('firstName').textContent = (state.nombre||'').split(' ')[0];
+    state.rows = j.rows||[];
+    afterData();
+  }catch(err){
+    document.getElementById('list').innerHTML=`<div class="state"><div class="ic">⚠️</div><h3>No pude conectar</h3><p>${err.message}</p></div>`;
   }
 }
-
-async function bootstrap() {
-  if (googleToken) {
-    const payload = decodeJWT(googleToken);
-    if (payload && payload.email && payload.exp * 1000 > Date.now()) {
-      userEmail = payload.email;
-      const res = await callAPI('catalogos');
-      if (res.ok) { catalogos = res.data; initApp(); return; }
-    }
-    googleToken = '';
-    localStorage.removeItem('vc_token');
+function afterData(){
+  // Director: mostrar filtro de asesoras
+  if(state.rol==='director'){
+    document.getElementById('dirFilter').classList.remove('hidden');
+    document.getElementById('heroSub').textContent='Vista de Director · todo el equipo';
+    const sel=document.getElementById('dirSelect');
+    const names=[...new Set(state.rows.map(r=>r.asesora).filter(Boolean))].sort();
+    sel.innerHTML='<option value="">Todas las asesoras</option>'+names.map(n=>`<option>${n}</option>`).join('');
   }
-  initGoogleSignIn();
+  render();
 }
-bootstrap();
-
-// ============================================================
-// BÚSQUEDA DE PACIENTE
-// ============================================================
-function onBuscar(e) {
-  const txt = e.target.value.trim();
-  hide('pacNoExiste');
-  if (BUSCANDO) clearTimeout(BUSCANDO);
-  if (txt.length < 2) { hide('resultados'); return; }
-  // Indicador visual de que el sistema está consultando la base
-  $('resultados').innerHTML = '<div class="trat-buscando">Buscando datos…</div>';
-  show('resultados');
-  BUSCANDO = setTimeout(async () => {
-    const r = await callAPI('buscar', { query: txt });
-    pintarResultados(r);
-  }, 300);
+async function apiPost(body){
+  if(state.demo) return {ok:true};
+  body.idToken = state.idToken;
+  const r = await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)});
+  return await r.json();
 }
 
-function pintarResultados(r) {
-  const cont = $('resultados');
-  if (!r.ok) { hide('resultados'); return; }
-  if (!r.data.length) { hide('resultados'); show('pacNoExiste'); return; }
-  cont.innerHTML = r.data.map(p =>
-    '<div onclick=\'elegirPaciente(' + JSON.stringify(p).replace(/'/g, "&#39;") + ')\'>' +
-      '<div>' + escapeHtml(p.nombre) + (p.apodo ? ' <span class="muted small">(' + escapeHtml(p.apodo) + ')</span>' : '') + '</div>' +
-      '<div class="rid">ID ' + escapeHtml(p.id) + (p.estatus ? ' · ' + escapeHtml(p.estatus) : '') + '</div>' +
-    '</div>').join('');
-  show('resultados');
+// ============ RENDER ============
+function showLoading(){ document.getElementById('list').innerHTML=`<div class="state"><div class="spinner"></div><p>Cargando tu seguimiento…</p></div>`; }
+function setTab(t){
+  state.tab=t;
+  document.getElementById('tabDia').classList.toggle('active',t==='dia');
+  document.getElementById('tabTodas').classList.toggle('active',t==='todas');
+  document.getElementById('nDia').classList.toggle('active',t==='dia');
+  document.getElementById('nTodas').classList.toggle('active',t==='todas');
+  document.getElementById('searchWrap').classList.toggle('hidden',t==='dia');
+  render();
 }
+function estadoBadge(e){
+  if(e==='Vencida')return '<span class="badge b-venc">⏰ Vencida</span>';
+  if(e==='Cerrada')return '<span class="badge b-cerr">✓ Cerrada</span>';
+  if(e==='Descartada')return '<span class="badge b-desc">Descartada</span>';
+  return '<span class="badge b-seg">● En seguimiento</span>';
+}
+function money(n){return '$'+Number(n||0).toLocaleString('es-MX');}
+function visibles(){
+  let rows=state.rows;
+  if(state.rol==='director'){ const f=document.getElementById('dirSelect').value; if(f) rows=rows.filter(r=>r.asesora===f); }
+  return rows;
+}
+function render(){
+  const all=visibles();
+  const hoy=all.filter(r=>r.accionHoy&&(r.estado==='En seguimiento'||r.estado==='Vencida'));
+  document.getElementById('kHoy').textContent=hoy.length;
+  document.getElementById('kSeg').textContent=all.filter(r=>r.estado==='En seguimiento').length;
+  document.getElementById('kVenc').textContent=all.filter(r=>r.estado==='Vencida').length;
+  document.getElementById('kCerr').textContent=all.filter(r=>r.estado==='Cerrada').length;
 
-function elegirPaciente(p) {
-  PAC = p;
-  hide('resultados');
-  $('buscaPac').value = '';
-  $('pacNombre').textContent = p.nombre;
-  $('pacMeta').textContent = 'ID ' + p.id + (p.apodo ? ' · Le gusta: ' + p.apodo : '') + (p.estatus ? ' · ' + p.estatus : '') + (p.procedencia ? ' · ' + p.procedencia : '');
-  const lh = $('linkHistorial'); if (lh) lh.style.display = '';
-  hide('pacLibreLink');
-  show('pacSel');
-  hide('pacNoExiste');
-  hide('histBox');
-  // Si ya estaba seleccionada la línea Cirugía, recargar las cotizaciones del nuevo paciente
-  if ($('linea').value === 'Cirugía') cargarCotizaciones();
-}
-// Paciente externo de la Dra. Damián: nombre capturado a mano (sin darlo de alta en la base)
-function usarPacienteLibre() {
-  const nombre = $('buscaPac').value.trim();
-  if (nombre.length < 3) { showMsg('Escribe el nombre del paciente en el buscador y luego usa esta opción.'); return; }
-  PAC = { id: '', nombre: nombre, estatus: 'Externo', procedencia: '', esLibre: true };
-  $('pacNombre').textContent = nombre;
-  $('pacMeta').textContent = 'Paciente externo (Dra. Damián) · nombre capturado a mano';
-  const lh = $('linkHistorial'); if (lh) lh.style.display = 'none';
-  hide('resultados'); hide('pacNoExiste'); hide('histBox'); hide('pacLibreLink');
-  $('buscaPac').value = '';
-  show('pacSel');
-}
-function limpiarPaciente() {
-  PAC = null;
-  COT_ELEGIDA = null;
-  COTIZACIONES_PAC = [];
-  hide('pacSel');
-  hide('histBox');
-  show('pacLibreLink');
-  $('buscaPac').value = '';
-  if ($('linea').value === 'Cirugía') cargarCotizaciones();
-  $('buscaPac').focus();
-}
+  const done=getDone(); const tot=hoy.length, dn=hoy.filter(r=>done.includes(r.id)).length;
+  const pct=tot?Math.round(dn/tot*100):0;
+  document.getElementById('ringPct').textContent=pct+'%';
+  document.getElementById('ringFill').style.strokeDashoffset=201-(201*pct/100);
+  document.getElementById('progTitle').textContent=tot?`${dn} de ${tot} contactos hechos`:'Sin pendientes hoy';
+  document.getElementById('progSub').textContent=tot?(pct===100?'¡Lo lograste! 🎉':'Tú puedes, sigue así'):'Disfruta tu día';
 
-async function verHistorial() {
-  if (!PAC) return;
-  const box = $('histBox');
-  // Alterna: si ya está visible, lo oculta
-  if (!box.classList.contains('hidden')) { hide('histBox'); return; }
-  box.innerHTML = '<div class="trat-buscando">Cargando historial…</div>';
-  show('histBox');
-  const r = await callAPI('historial', { idPaciente: PAC.id });
-  if (!r.ok) { box.innerHTML = '<div class="muted small">No se pudo cargar el historial.</div>'; return; }
-  const money = n => '$' + Number(n).toLocaleString('es-MX', { minimumFractionDigits: 2 });
-  if (!r.data.length) {
-    box.innerHTML = '<div class="hh">Historial de pagos</div><div class="muted small">Este paciente no tiene cobros registrados aún.</div>';
+  let rows;
+  if(state.tab==='dia'){ rows=hoy; }
+  else{
+    const q=(document.getElementById('searchInput').value||'').toLowerCase();
+    rows=all.filter(r=>!q||(r.paciente+' '+r.procedimiento).toLowerCase().includes(q));
+    const ord={'Vencida':0,'En seguimiento':1,'Cerrada':2,'Descartada':3};
+    rows.sort((a,b)=>(ord[a.estado]??9)-(ord[b.estado]??9)||a.dias-b.dias);
+  }
+  const list=document.getElementById('list');
+  if(rows.length===0){
+    list.innerHTML=state.tab==='dia'
+      ?`<div class="state"><div class="ic">🎉</div><h3>¡Día completo!</h3><p>No hay pacientes pendientes de contactar hoy. Buen trabajo.</p></div>`
+      :`<div class="state"><div class="ic">🔍</div><h3>Sin resultados</h3><p>No hay pacientes que coincidan.</p></div>`;
     return;
   }
-  let html = '<div class="hh">Historial de pagos · ' + escapeHtml(PAC.nombre) + '</div>';
-  r.data.forEach(h => {
-    html += '<div class="hist-row">' +
-      '<div><div class="hl">' + escapeHtml(h.tratamiento || h.linea) + '</div>' +
-      '<div class="hm">' + escapeHtml(h.fecha) + ' · ' + escapeHtml(h.folio) + ' · ' + escapeHtml(h.condicion || '') + ' · ' + escapeHtml(h.metodo || '') + '</div></div>' +
-      '<div class="hl">' + money(h.montoMXN) + '</div>' +
-    '</div>';
-  });
-  html += '<div class="hist-total">Total pagado: ' + money(r.totalMXN) + ' MXN</div>';
-  box.innerHTML = html;
-}
-
-// ============================================================
-// MONEDA / DÓLARES
-// ============================================================
-function onMoneda() {
-  const usd = $('moneda').value === 'USD';
-  $('boxTC').classList.toggle('hidden', !usd);
-  $('lblMonto').textContent = usd ? 'Monto a cobrar (MXN)' : 'Monto a cobrar';
-  previewMXN();
-}
-function previewMXN() {
-  const usd = $('moneda').value === 'USD';
-  const m = parseFloat($('monto').value);
-  const tc = parseFloat($('tc').value);
-  const box = $('previewMXN');
-  if (usd && m > 0 && tc > 0) {
-    // El monto se captura en MXN (oficial). Se divide entre el TC para saber cuánto cobrar en USD.
-    const enUSD = m / tc;
-    box.textContent = 'Cobrar ' + enUSD.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' USD  (= $' + m.toLocaleString('es-MX', { minimumFractionDigits: 2 }) + ' MXN ÷ ' + tc + ')';
-    box.classList.remove('hidden');
-  } else { box.classList.add('hidden'); }
-}
-
-// ============================================================
-// ENVIAR COBRO
-// ============================================================
-async function enviarCobro() {
-  if (ENVIANDO) return;
-  hideMsg();
-  limpiarErrores();
-  // Cobro 100% Dra. Damián: no se piden datos generales ni facturación
-  const soloDamian = CARRITO.length && CARRITO.every(t => _esLineaDamian(t.linea));
-  const medico = soloDamian ? 'Dra. Carmen Damián' : $('medico').value;
-  const faltan = [];
-  if (!PAC) faltan.push('paciente');
-  if (!soloDamian && !$('medico').value) { marcarError('medico'); faltan.push('médico titular'); }
-  if (!CARRITO.length) faltan.push('al menos un tratamiento en la lista');
-  if (faltan.length) {
-    if (!PAC) marcarError('buscaPac');
-    return showMsg('Faltan datos obligatorios: ' + faltan.join(', ') + '. Revisa lo marcado en rojo.');
-  }
-
-  // Datos comunes a toda la sesión
-  const comun = {
-    idPaciente: PAC.id, nombrePaciente: PAC.nombre,
-    estatusPaciente: PAC.estatus || '', procedencia: PAC.procedencia || '',
-    medico, operativo: soloDamian ? 'Dra. Carmen Damián' : $('operativo').value,
-    prospecta: soloDamian ? '' : $('prospecta').value, cierra: soloDamian ? '' : $('cierra').value,
-    factura: soloDamian ? 'No' : $('factura').value,
-    numFactura: (!soloDamian && $('factura').value === 'Sí') ? $('numFactura').value.trim() : '',
-    observaciones: $('obs').value.trim()
-  };
-
-  // Un cobro por cada tratamiento del carrito
-  const cobros = CARRITO.map(t => ({
-    idPaciente: comun.idPaciente, nombrePaciente: comun.nombrePaciente,
-    estatusPaciente: comun.estatusPaciente, procedencia: comun.procedencia,
-    linea: t.linea, tratamiento: t.tratamiento, area: t.area,
-    medico: comun.medico, operativo: comun.operativo,
-    prospecta: comun.prospecta, cierra: comun.cierra,
-    condicion: t.condicion,
-    metodo: t.metodo, terminal: t.terminal, moneda: t.moneda,
-    montoOriginal: t.monto,
-    precioLista: t.precioLista, descuentoPct: t.descuentoPct,
-    tipoCambio: t.moneda === 'USD' ? t.tipoCambio : '',
-    factura: comun.factura, numFactura: comun.numFactura,
-    cotizacionId: t.cotizacionId || '',
-    observaciones: [comun.observaciones, t.obsDescuento].filter(Boolean).join(' · ')
-  }));
-
-  ENVIANDO = true;
-  const b = $('btnCobrar');
-  b.disabled = true; b.textContent = 'Registrando…';
-  const r = await callAPI('cobroMultiple', { cobros });
-  ENVIANDO = false;
-  b.disabled = false; b.textContent = 'Registrar cobro';
-  if (!r.ok) return showMsg(r.error || 'No se pudo registrar.');
-  pintarReciboMultiple(r.recibos, comun, r.estadosCuenta || {});
-  pintarReparto(r.reparto || [], r.desglosesReales || {});
-  RECIBO_IMPRESO = false;
-  renderComprobantes(r.recibos || [], cobros, comun);
-  _gateNuevoCobro();
-  hide('view-cobro');
-  show('view-recibo');
-  window.scrollTo(0, 0);
-}
-
-// ============================================================
-// RECIBO (múltiple: varios tratamientos en un solo comprobante)
-// ============================================================
-function pintarReciboMultiple(recibos, comun, estadosCuenta) {
-  const money = n => '$' + Number(n).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  estadosCuenta = estadosCuenta || {};
-  const d0 = recibos[0] || {};
-  let filas =
-    row('Fecha', d0.fecha) +
-    row('Paciente', comun.nombrePaciente) +
-    (comun.medico ? row('Médico', comun.medico) : '') +
-    (comun.condicion ? row('Condición', comun.condicion) : '');
-
-  // Detalle por tratamiento
-  filas += '<tr><td class="k" colspan="2" style="padding-top:12px;font-weight:600;">Tratamientos</td></tr>';
-  let totalMXN = 0;
-  let totalUSD = 0;
-  let hayUSD = false;
-  recibos.forEach(d => {
-    totalMXN += Number(d.montoMXN || 0);
-    if (d.moneda === 'USD' && d.montoUSD) { totalUSD += Number(d.montoUSD); hayUSD = true; }
-    const detalle = (d.linea || '') + (d.tratamiento ? ' · ' + d.tratamiento : '') +
-                    ' (' + escapeHtml(d.folio) + ')';
-    const montoTxt = (d.moneda === 'USD' && d.montoUSD)
-      ? money(d.montoUSD) + ' USD  (' + money(d.montoMXN) + ' MXN)'
-      : money(d.montoMXN);
-    filas += '<tr><td class="k">' + escapeHtml(detalle) + '</td><td>' + montoTxt + '</td></tr>';
-  });
-  if (hayUSD) {
-    filas += '<tr><td class="k total">Total a cobrar</td><td class="total">' + money(totalUSD) + ' USD</td></tr>';
-    filas += '<tr><td class="k">Registro interno</td><td>' + money(totalMXN) + ' MXN</td></tr>';
-  } else {
-    filas += '<tr><td class="k total">Total cobrado</td><td class="total">' + money(totalMXN) + ' MXN</td></tr>';
-  }
-
-  // Bloque de estado de cuenta para cirugías por cotización (saldo + histórico)
-  let bloqueEstados = '';
-  Object.keys(estadosCuenta).forEach(cid => {
-    const e = estadosCuenta[cid];
-    if (!e) return;
-    const liquidado = Number(e.saldo) <= 0.01;
-    const abonosRows = (e.abonos && e.abonos.length)
-      ? e.abonos.map(a => '<tr><td class="k">' + escapeHtml(a.fecha) + '</td><td>' + escapeHtml(a.formaPago || '') + '</td><td style="text-align:right;">' + money(a.monto) + '</td></tr>').join('')
-      : '<tr><td colspan="3" class="muted small">—</td></tr>';
-    bloqueEstados +=
-      '<div style="margin-top:18px;padding-top:12px;border-top:1px dashed var(--border);">' +
-        '<div style="font-weight:600;">Estado de cuenta · ' + escapeHtml(cid) + '</div>' +
-        (liquidado
-          ? '<div style="color:var(--success);font-weight:600;margin:6px 0;">✓ Procedimiento LIQUIDADO</div>'
-          : '<div style="color:var(--error);font-weight:600;margin:6px 0;">PAGO PARCIAL · Este procedimiento NO está liquidado</div>') +
-        '<table style="margin-top:4px;">' + abonosRows + '</table>' +
-        '<table style="margin-top:8px;">' +
-          '<tr><td class="k">Gran Total</td><td style="text-align:right;">' + money(e.granTotal) + '</td></tr>' +
-          '<tr><td class="k">Total abonado</td><td style="text-align:right;">' + money(e.abonado) + '</td></tr>' +
-          '<tr><td class="k total">Saldo pendiente</td><td class="total" style="text-align:right;">' + money(e.saldo) + '</td></tr>' +
-        '</table>' +
-      '</div>';
-  });
-
-  const foliosTxt = recibos.map(d => d.folio).join(', ');
-  $('reciboArea').innerHTML =
-    '<div class="recibo">' +
-      '<div class="rb-h">' +
-        '<div><div class="brand">DR. MIGUEL SOTO</div><div class="sub">Cirujano Plástico Certificado</div></div>' +
-        '<div><div class="doc-tag">Recibo de cobro</div><div class="folio">' + escapeHtml(foliosTxt) + '</div></div>' +
-      '</div>' +
-      '<table>' + filas + '</table>' +
-      bloqueEstados +
-      '<div class="pie">Atendió: ' + escapeHtml(d0.capturo || '') + ' · Conserve este recibo como comprobante de su pago.</div>' +
-    '</div>';
-}
-function row(k, v) { return '<tr><td class="k">' + k + '</td><td>' + escapeHtml(String(v == null ? '' : v)) + '</td></tr>'; }
-
-// Distribución del dinero: a qué caja/terminal va cada peso (uso interno de recepción)
-function pintarReparto(reparto, desglosesReales) {
-  const card = $('repartoCard');
-  const area = $('repartoArea');
-  desglosesReales = desglosesReales || {};
-  reparto = reparto || [];
-  const money = n => '$' + Number(n).toLocaleString('es-MX', { minimumFractionDigits: 2 });
-  const cajaEfectivo = t => t === 'Efectivo Dr.' ? 'Caja Dr. Miguel Soto' : (t === 'Efectivo Renasté' ? 'Caja Renasté' : t);
-  const entLabel = e => e === 'Dr' ? 'Dr. Miguel Soto' : (e === 'Clinica' ? 'Renasté' : e);
-  const fila = (k, v, big) => '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border-soft);' +
-    (big ? 'font-size:1.05rem;' : '') + '"><span>' + escapeHtml(k) + '</span><b>' + money(v) + '</b></div>';
-
-  // Si se liquidó una cirugía, mostramos el DESGLOSE REAL (después de las reglas), no el reparto físico
-  const claves = Object.keys(desglosesReales);
-  if (claves.length) {
-    let html = '<div class="section-label serif" style="margin-top:0;">Desglose real — cuánto recibe cada quién</div>' +
-      '<div class="muted small" style="margin:-6px 0 12px;">Después de todas las reglas (excedente e IVA al Dr, neto de la clínica, IVA al SAT). Uso interno.</div>';
-    claves.forEach(cid => {
-      const d = desglosesReales[cid];
-      html += '<div style="border:1px solid var(--border-soft);border-radius:6px;padding:14px 16px;margin-bottom:12px;">' +
-        '<div style="font-weight:600;margin-bottom:8px;">' + escapeHtml(cid) + (d.procedimiento ? ' · ' + escapeHtml(d.procedimiento) : '') + '  —  total ' + money(d.granTotal) + '</div>';
-      html += fila('Dr. Miguel Soto recibe', d.drRecibe, true);
-      html += '<div class="muted small" style="margin:2px 0 8px;">honorarios ' + money(d.honorarios) + ' + excedente ' + money(d.excedente) +
-        (Number(d.ivaLiberado) > 0 ? ' + IVA liberado ' + money(d.ivaLiberado) : '') + '</div>';
-      html += fila('Renasté (clínica) neto', d.clinicaNeta, false);
-      html += fila('IVA al SAT', d.ivaSAT, false);
-      if (d.deudas && d.deudas.length) {
-        d.deudas.forEach(de => {
-          html += '<div style="margin-top:10px;padding-top:8px;border-top:1px dashed var(--border);color:var(--accent-dark);">' +
-            '↪ <b>' + escapeHtml(entLabel(de.deudor)) + '</b> le debe a <b>' + escapeHtml(entLabel(de.acreedor)) + '</b>: ' + money(de.monto) +
-            '<div class="muted small">' + escapeHtml(de.razon || 'Parte del cobro corresponde a la otra entidad') + '. Se salda en el Balance de deuda.</div>' +
-            '</div>';
-        });
-      }
-      html += '</div>';
-    });
-    area.innerHTML = html;
-    card.classList.remove('hidden');
-    return;
-  }
-
-  // Si NO hubo liquidación (anticipo/abono), mostramos a qué caja/terminal entró el dinero
-  if (!reparto.length) { card.classList.add('hidden'); area.innerHTML = ''; return; }
-  const efectivos = reparto.filter(r => r.esEfectivo);
-  const otros = reparto.filter(r => !r.esEfectivo);
-  let html = '<div class="section-label serif" style="margin-top:0;">Distribución del dinero</div>' +
-    '<div class="muted small" style="margin:-6px 0 12px;">A qué caja/terminal entró este cobro (uso interno, no aparece en el recibo del paciente).</div>';
-  if (efectivos.length) {
-    html += '<div style="background:#fbf3e6;border:1px solid #e8d9bc;border-radius:6px;padding:14px 16px;margin-bottom:12px;">' +
-      '<div style="font-weight:600;margin-bottom:8px;">💵 Efectivo recibido en:</div>';
-    efectivos.forEach(r => {
-      html += '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #ecdfc4;"><span>' +
-        escapeHtml(cajaEfectivo(r.terminal)) + '</span><b>' + money(r.monto) + '</b></div>';
-    });
-    html += '</div>';
-  }
-  if (otros.length) {
-    html += '<div style="border:1px solid var(--border-soft);border-radius:6px;padding:14px 16px;">' +
-      '<div style="font-weight:600;margin-bottom:8px;">Cobros electrónicos:</div>';
-    otros.forEach(r => {
-      const meta = entLabel(r.entidad) ? ' · ' + entLabel(r.entidad) : '';
-      html += '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border-soft);"><span>' +
-        escapeHtml(r.terminal) + meta + '</span><b>' + money(r.monto) + '</b></div>';
-    });
-    html += '</div>';
-  }
-  area.innerHTML = html;
-  card.classList.remove('hidden');
-}
-
-function imprimir() {
-  window.print();
-  RECIBO_IMPRESO = true;
-  _gateNuevoCobro();
-}
-function nuevoCobro() {
-  PAC = null;
-  CARRITO = [];
-  TRAT_ELEGIDO = null;
-  COT_ELEGIDA = null;
-  COTIZACIONES_PAC = [];
-  renderCarrito();
-  ['tratamiento', 'monto', 'tc', 'obs', 'buscaPac', 'numFactura', 'precioLista', 'descuento', 'descuentoMonto', 'autorizaDesc'].forEach(id => $(id).value = '');
-  $('tratamiento').readOnly = false;
-  $('monto').readOnly = false;
-  $('descuento').disabled = false;
-  $('descuentoMonto').disabled = false;
-  $('pagoDistinto').disabled = false;
-  ['linea', 'metodo', 'terminal', 'moneda', 'metodoTrat', 'terminalTrat', 'monedaTrat', 'medico', 'operativo', 'prospecta', 'cierra', 'condicion', 'factura'].forEach(id => { if ($(id)) $(id).selectedIndex = 0; });
-  ['medico', 'operativo', 'prospecta', 'cierra'].forEach(id => { $(id).disabled = false; });
-  $('condicion').disabled = false;
-  DATOS_BLOQUEADOS = false;
-  show('grupoTerminal'); show('grupoTerminalTrat');
-  $('pagoDistinto').checked = false;
-  limpiarErrores();
-  hide('pacSel'); hide('boxTC'); hide('previewMXN'); hide('msg'); hide('boxNumFactura'); hide('boxPagoTrat'); hide('histBox'); hide('boxAutoriza'); show('pacLibreLink');
-  hide('cotizacionBox'); hide('cotizacionSaldo'); hide('cotizacionAcciones');
-  show('grupoTratamiento'); show('grupoPrecioLista'); show('grupoDescuentos');
-  show('seccionDatosGenerales'); show('seccionFacturacion');
-  $('liquidarSplit').checked = false;
-  $('cotizacionInfo').textContent = ''; $('cotizacionSel').innerHTML = '';
-  hide('repartoCard'); hide('comprobantesCard');
-  hide('view-estado'); hide('view-recibo'); show('view-cobro');
-  window.scrollTo(0, 0);
-}
-
-// ============================================================
-// BUSCADOR INTELIGENTE DE TRATAMIENTOS + PRECIO/DESCUENTO
-// ============================================================
-// Normaliza para búsqueda: minúsculas y SIN acentos (á→a, ñ→n, etc.)
-function _normTxt(s) {
-  return String(s == null ? '' : s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-}
-// ¿Es la línea de la Dra. Damián? (a prueba de acentos / cómo se haya escrito)
-function _esLineaDamian(linea) {
-  return _normTxt(linea).indexOf('damian') >= 0;
-}
-function onBuscarTrat() {
-  const q = _normTxt($('tratamiento').value.trim());
-  const lineaSel = $('linea').value;
-  tratSel = -1;
-  TRAT_ELEGIDO = null; // al escribir, se invalida cualquier selección previa
-  if (!lineaSel) {
-    $('tratResultados').innerHTML = '<div class="trat-buscando">Primero elige la línea de negocio</div>';
-    show('tratResultados');
-    return;
-  }
-  if (q.length < 2 || !PRECIOS.length) { hide('tratResultados'); return; }
-  $('tratResultados').innerHTML = '<div class="trat-buscando">Buscando…</div>';
-  show('tratResultados');
-  const palabras = q.split(/\s+/);
-  // Solo tratamientos de la línea seleccionada (búsqueda sin acentos)
-  const matches = PRECIOS.filter(p => {
-    if (_normTxt(p.linea) !== _normTxt(lineaSel)) return false;
-    const nl = _normTxt(p.nombre + ' ' + (p.categoria || ''));
-    return palabras.every(w => nl.indexOf(w) !== -1);
-  }).slice(0, 30);
-  if (!matches.length) {
-    $('tratResultados').innerHTML = '<div class="trat-buscando">Sin coincidencias en esta línea — puedes escribir el concepto y precio a mano</div>';
-    return;
-  }
-  const money = n => '$' + Number(n).toLocaleString('es-MX', { minimumFractionDigits: 0 });
-  $('tratResultados').innerHTML = matches.map((p, i) =>
-    '<div class="trat-item' + (p.esPaquete ? ' trat-paquete' : '') + '" data-i="' + i + '" onclick="elegirTrat(' + i + ')"' +
-      (p.esPaquete ? ' style="opacity:0.6;"' : '') + '>' +
-      '<span class="tp">' + money(p.costo) + '</span>' +
-      '<div class="tn">' + escapeHtml(p.nombre) +
-        (p.esPaquete ? ' <span style="color:var(--error);font-size:0.7rem;font-weight:600;">PAQUETE · por cotización</span>' : '') +
-      '</div>' +
-      (p.categoria ? '<div class="tc">' + escapeHtml(p.categoria) + '</div>' : '') +
-    '</div>'
-  ).join('');
-  $('tratResultados')._matches = matches;
-  show('tratResultados');
-}
-
-function elegirTrat(i) {
-  const matches = $('tratResultados')._matches || [];
-  const p = matches[i];
-  if (!p) return;
-  if (p.esPaquete) {
-    hide('tratResultados');
-    showMsg('"' + p.nombre + '" es un PAQUETE: no se cobra directo aquí. Debe cotizarse, aceptarse la cotización y cobrarse como paquete (entra a la app de paquetes y descuenta sesiones).');
-    return;
-  }
-  $('tratamiento').value = p.nombre;
-  hide('tratResultados');
-  // Dra. Carmen Damián: ella NO usa la lista de precios → el concepto solo rellena el nombre,
-  // el precio/monto quedan ABIERTOS para capturarlos a mano.
-  if (_esLineaDamian(p.linea)) {
-    $('precioLista').value = '';
-    $('monto').value = '';
-    TRAT_ELEGIDO = { nombre: p.nombre, costo: '', linea: p.linea };
-    $('monto').focus();
-    return;
-  }
-  $('precioLista').value = p.costo;
-  TRAT_ELEGIDO = { nombre: p.nombre, costo: p.costo, linea: p.linea };
-  calcularMonto();
-}
-
-function onTratKeydown(e) {
-  const box = $('tratResultados');
-  if (box.classList.contains('hidden')) return;
-  const items = box.querySelectorAll('.trat-item');
-  if (!items.length) return;
-  if (e.key === 'ArrowDown') { e.preventDefault(); tratSel = Math.min(tratSel + 1, items.length - 1); }
-  else if (e.key === 'ArrowUp') { e.preventDefault(); tratSel = Math.max(tratSel - 1, 0); }
-  else if (e.key === 'Enter') { e.preventDefault(); if (tratSel >= 0) elegirTrat(tratSel); return; }
-  else return;
-  items.forEach((it, idx) => it.classList.toggle('active', idx === tratSel));
-  if (items[tratSel]) items[tratSel].scrollIntoView({ block: 'nearest' });
-}
-
-// Monto a cobrar = precio de lista - descuento%. Sigue siendo editable a mano.
-function calcularMonto() {
-  const precio = parseFloat($('precioLista').value);
-  const descPct = parseFloat($('descuento').value) || 0;
-  const descMonto = parseFloat($('descuentoMonto').value) || 0;
-  // Mostrar/ocultar el campo de quién autoriza según haya descuento
-  if (descPct > 0 || descMonto > 0) show('boxAutoriza'); else hide('boxAutoriza');
-  if (!(precio > 0)) { previewMXN(); return; }
-  const d = Math.min(Math.max(descPct, 0), 100);
-  let final = precio * (1 - d / 100);   // primero el porcentaje
-  final = final - Math.max(descMonto, 0); // luego el monto fijo
-  if (final < 0) final = 0;
-  $('monto').value = Math.round(final * 100) / 100;
-  previewMXN();
-}
-
-// ============================================================
-// CORTESÍA (descuento 100%, cobro $0)
-// ============================================================
-function aplicarCortesia() {
-  // Monto a cobrar = 0
-  $('monto').value = 0;
-  $('monto').readOnly = true;
-  // Método de pago automático: Cortesía / No aplica
-  $('metodo').value = 'Cortesía / No aplica';
-  $('terminal').value = 'Cortesía / No aplica';
-  $('moneda').value = 'MXN';
-  onMoneda();
-  // Bloquear descuentos manuales (la cortesía ya es 100%)
-  $('descuento').value = ''; $('descuento').disabled = true;
-  $('descuentoMonto').value = ''; $('descuentoMonto').disabled = true;
-  // La cortesía exige autorizador (igual que un descuento)
-  show('boxAutoriza');
-  // El método general no se toca cuando es cortesía
-  $('pagoDistinto').checked = false; hide('boxPagoTrat');
-  $('pagoDistinto').disabled = true;
-  hide('previewMXN');
-}
-function quitarCortesia() {
-  $('monto').readOnly = false;
-  $('descuento').disabled = false;
-  $('descuentoMonto').disabled = false;
-  $('pagoDistinto').disabled = false;
-  // Ocultar autorizador solo si no hay descuento activo
-  const descPct = parseFloat($('descuento').value) || 0;
-  const descMonto = parseFloat($('descuentoMonto').value) || 0;
-  if (descPct <= 0 && descMonto <= 0) hide('boxAutoriza');
-}
-
-
-function agregarTratamiento() {
-  hideMsg();
-  limpiarErrores();
-  const linea = $('linea').value;
-  const tratamiento = $('tratamiento').value.trim();
-  const monto = parseFloat($('monto').value);
-
-  // === Interceptación Cirugía: exige cotización aceptada y, si es electrónico Dr, pide split ===
-  if (linea === 'Cirugía') {
-    const condicionTmp = $('condicion').value;
-    const esCortesiaTmp = (condicionTmp === 'Cortesía');
-    if (!esCortesiaTmp) {
-      if (!COT_ELEGIDA) {
-        marcarError('cotizacionSel');
-        return showMsg('Esta cirugía requiere una cotización ACEPTADA. Selecciónala en el menú "Cotización aceptada".');
-      }
-      const usaPropioTmp = $('pagoDistinto').checked;
-      const terminalTmp = usaPropioTmp ? $('terminalTrat').value : $('terminal').value;
-      const ELECTRONICAS_DR = ['Multiva MS','Multiva Amex','Mercado Pago','HSBC','Multiva','Santander','PayPal','Zelle'];
-      // Si el monto cubre TODO el saldo pendiente, es una liquidación → split automático (dos cajas),
-      // aunque recepción no haya marcado la casilla. Así no se le olvida repartir.
-      const montoVal = parseFloat($('monto').value) || 0;
-      const saldoPend = (COT_ELEGIDA.saldoPendiente != null) ? COT_ELEGIDA.saldoPendiente : COT_ELEGIDA.granTotal;
-      const liquidaTodo = montoVal >= (saldoPend - 0.01);
-      const quiereSplit = $('liquidarSplit').checked || liquidaTodo;
-      if (quiereSplit) {
-        $('condicion').value = 'Liquidación';
-        return mostrarModalSplitCirugia(terminalTmp);
-      }
-      // Abono / pago a una sola terminal: un cobro con el monto capturado (el backend lo aplica y reconcilia al final)
-    }
-  }
-
-  const condicion = $('condicion').value;
-  const esCortesia = (condicion === 'Cortesía');
-
-  const faltan = [];
-  if (!linea) { marcarError('linea'); faltan.push('línea de negocio'); }
-  if (!tratamiento) { marcarError('tratamiento'); faltan.push('tratamiento'); }
-  // Tratamiento estricto: debe haberse elegido de la lista (excepto Dra. Damián, que captura concepto libre)
-  if (tratamiento && !TRAT_ELEGIDO && !_esLineaDamian(linea)) { marcarError('tratamiento'); faltan.push('elegir el tratamiento de la lista'); }
-  if (!condicion) { marcarError('condicion'); faltan.push('condición de pago'); }
-  // En cortesía el monto es 0 (válido); en lo demás debe ser > 0
-  if (!esCortesia && !(monto > 0)) { marcarError('monto'); faltan.push('monto'); }
-
-  // Descuento o cortesía: exige quién autoriza
-  const descPct = parseFloat($('descuento').value) || 0;
-  const descMonto = parseFloat($('descuentoMonto').value) || 0;
-  const autoriza = $('autorizaDesc').value.trim();
-  if ((esCortesia || descPct > 0 || descMonto > 0) && !autoriza) {
-    marcarError('autorizaDesc');
-    faltan.push(esCortesia ? 'quién autoriza la cortesía' : 'quién autoriza el descuento');
-  }
-
-  // Método de pago: general o propio del tratamiento
-  let metodo, terminal, moneda;
-  if ($('pagoDistinto').checked && !esCortesia) {
-    metodo = $('metodoTrat').value; terminal = $('terminalTrat').value; moneda = $('monedaTrat').value;
-    if (!metodo) { marcarError('metodoTrat'); faltan.push('método'); }
-    if (!terminal) { marcarError('terminalTrat'); faltan.push('terminal'); }
-    if (!moneda) { marcarError('monedaTrat'); faltan.push('moneda'); }
-  } else {
-    metodo = $('metodo').value; terminal = $('terminal').value; moneda = $('moneda').value;
-    if (!metodo) { marcarError('metodo'); faltan.push('método (general)'); }
-    if (!terminal) { marcarError('terminal'); faltan.push('terminal (general)'); }
-    if (!moneda) { marcarError('moneda'); faltan.push('moneda (general)'); }
-  }
-  const tc = (moneda === 'USD' && !esCortesia) ? parseFloat($('tc').value) : '';
-  if (moneda === 'USD' && !esCortesia && !(tc > 0)) { marcarError('tc'); faltan.push('tipo de cambio'); }
-
-  if (faltan.length) return showMsg('Faltan datos del tratamiento: ' + faltan.join(', ') + '. Revisa lo marcado en rojo.');
-
-  // Texto de descuento/cortesía para observaciones/auditoría
-  const money0 = n => '$' + Number(n).toLocaleString('es-MX', { minimumFractionDigits: 2 });
-  const valorLista = $('precioLista').value !== '' ? parseFloat($('precioLista').value) : 0;
-  let obsDescuento = '';
-  if (esCortesia) {
-    obsDescuento = 'CORTESÍA (valor de lista ' + money0(valorLista) + ') autorizada por ' + autoriza;
-  } else {
-    let descTxt = '';
-    if (descPct > 0) descTxt += descPct + '%';
-    if (descMonto > 0) descTxt += (descTxt ? ' + ' : '') + '$' + descMonto;
-    obsDescuento = descTxt ? ('Descuento ' + descTxt + ' autorizado por ' + autoriza) : '';
-  }
-
-  CARRITO.push({
-    linea: linea,
-    tratamiento: tratamiento,
-    area: '',
-    condicion: condicion,
-    esCortesia: esCortesia,
-    precioLista: valorLista || '',
-    descuentoPct: esCortesia ? 100 : ($('descuento').value !== '' ? parseFloat($('descuento').value) : ''),
-    descuentoMonto: descMonto || '',
-    autorizaDesc: autoriza,
-    obsDescuento: obsDescuento,
-    monto: esCortesia ? 0 : monto,
-    metodo: metodo, terminal: terminal, moneda: moneda,
-    tipoCambio: tc,
-    cotizacionId: (linea === 'Cirugía' && COT_ELEGIDA) ? COT_ELEGIDA.cotizacionId : ''
-  });
-  renderCarrito();
-  limpiarTratamiento();
-}
-
-function quitarTratamiento(i) {
-  CARRITO.splice(i, 1);
-  renderCarrito();
-}
-
-function renderCarrito() {
-  const money = n => '$' + Number(n).toLocaleString('es-MX', { minimumFractionDigits: 2 });
-  if (!CARRITO.length) {
-    show('carritoVacio'); $('carritoLista').innerHTML = ''; hide('carritoTotal');
-    return;
-  }
-  hide('carritoVacio');
-  $('carritoLista').innerHTML = CARRITO.map((t, i) => {
-    const desc = t.descuentoPct ? ' · -' + t.descuentoPct + '%' : (t.descuentoMonto ? ' · -$' + t.descuentoMonto : '');
-    // El monto es SIEMPRE en MXN (oficial). Si paga en USD, se muestra el equivalente dividiendo.
-    let montoTxt = money(t.monto) + ' MXN';
-    let metaPago = escapeHtml(t.metodo) + ' / ' + escapeHtml(t.terminal);
-    if (t.esCortesia) {
-      montoTxt = 'CORTESÍA · $0';
-    } else if (t.moneda === 'USD' && t.tipoCambio > 0) {
-      const enUSD = t.monto / t.tipoCambio;
-      montoTxt = '$' + enUSD.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' USD';
-      metaPago += ' · USD (TC ' + t.tipoCambio + ')';
-    }
-    const metaCortesia = t.esCortesia && t.precioLista ? '<div class="ci-meta">Valor de lista: ' + money(t.precioLista) + ' MXN · Autoriza: ' + escapeHtml(t.autorizaDesc) + '</div>' : '';
-    return '<div class="cart-item">' +
-      '<div>' +
-        '<div class="ci-nombre">' + escapeHtml(t.tratamiento) + '</div>' +
-        '<div class="ci-meta">' + escapeHtml(t.linea) + ' · ' + escapeHtml(t.condicion || '') + desc + ' · ' + metaPago + '</div>' +
-        metaCortesia +
-        (t.moneda === 'USD' && t.tipoCambio > 0 && !t.esCortesia ? '<div class="ci-meta">Registro interno: ' + money(t.monto) + ' MXN</div>' : '') +
-        '<span class="ci-quitar" onclick="quitarTratamiento(' + i + ')">Quitar</span>' +
-      '</div>' +
-      '<div class="ci-monto">' + montoTxt + '</div>' +
-    '</div>';
-  }).join('');
-  // Total interno SIEMPRE en MXN (el monto ya está en pesos, no se multiplica)
-  let totalMXN = 0;       // total interno (todo en pesos, oficial)
-  let totalUSD = 0;       // suma a cobrar en dólares (solo tratamientos USD)
-  let mxnEnPesos = 0;     // tratamientos pagados en pesos
-  let hayUSD = false, hayMXN = false;
-  CARRITO.forEach(t => {
-    totalMXN += Number(t.monto);
-    if (t.moneda === 'USD' && t.tipoCambio > 0) {
-      totalUSD += Number(t.monto) / Number(t.tipoCambio);
-      hayUSD = true;
-    } else {
-      mxnEnPesos += Number(t.monto);
-      hayMXN = true;
-    }
-  });
-  const usdFmt = n => '$' + Number(n).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  if (hayUSD && !hayMXN) {
-    // Todo en dólares
-    $('carritoTotal').innerHTML =
-      '<div style="font-size:1.2rem;">A cobrar: ' + usdFmt(totalUSD) + ' USD</div>' +
-      '<div style="font-weight:400;font-size:0.85rem;color:var(--taupe);margin-top:4px;">Registro interno: ' + money(totalMXN) + ' MXN</div>';
-  } else if (hayUSD && hayMXN) {
-    // Mixto: parte en dólares, parte en pesos
-    $('carritoTotal').innerHTML =
-      '<div style="font-size:1.05rem;">A cobrar: ' + usdFmt(totalUSD) + ' USD + ' + money(mxnEnPesos) + ' MXN</div>' +
-      '<div style="font-weight:400;font-size:0.85rem;color:var(--taupe);margin-top:4px;">Registro interno total: ' + money(totalMXN) + ' MXN</div>';
-  } else {
-    // Todo en pesos
-    $('carritoTotal').textContent = 'Total: ' + money(totalMXN) + ' MXN';
-  }
-  show('carritoTotal');
-}
-
-function limpiarTratamiento() {
-  ['tratamiento', 'precioLista', 'descuento', 'descuentoMonto', 'monto', 'autorizaDesc'].forEach(id => $(id).value = '');
-  $('tratamiento').readOnly = false;
-  $('monto').readOnly = false;
-  $('descuento').disabled = false;
-  $('descuentoMonto').disabled = false;
-  $('pagoDistinto').disabled = false;
-  TRAT_ELEGIDO = null;
-  COT_ELEGIDA = null;
-  $('linea').selectedIndex = 0;
-  $('condicion').selectedIndex = 0;
-  $('condicion').disabled = false;
-  $('pagoDistinto').checked = false;
-  hide('boxPagoTrat');
-  hide('boxAutoriza');
-  hide('previewMXN');
-  hide('cotizacionBox');
-  hide('cotizacionSaldo');
-  hide('cotizacionAcciones');
-  show('grupoTratamiento');
-  $('liquidarSplit').checked = false;
-  $('cotizacionInfo').textContent = '';
-  $('cotizacionSel').innerHTML = '';
-  $('linea').focus();
-}
-
-// ============================================================
-// FACTURAS PENDIENTES (solo admin)
-// ============================================================
-async function abrirFacturas() {
-  hide('view-cobro'); hide('view-recibo'); show('view-facturas');
-  show('btn-volver-cobro'); hide('btn-facturas');
-  window.scrollTo(0, 0);
-  $('facturasLista').innerHTML = '<div class="muted small">Cargando…</div>';
-  const r = await callAPI('facturasPendientes');
-  if (!r.ok) { $('facturasLista').innerHTML = '<div class="alert alert-error">' + escapeHtml(r.error || 'Error') + '</div>'; return; }
-  if (!r.data.length) { $('facturasLista').innerHTML = '<div class="muted">No hay cobros pendientes de facturar. 🎉</div>'; return; }
-  const money = n => '$' + Number(n).toLocaleString('es-MX', { minimumFractionDigits: 2 });
-  $('facturasLista').innerHTML = r.data.map(f => {
-    const dias = (typeof f.diasDesdeCobro === 'number') ? f.diasDesdeCobro : null;
-    let badge = '';
-    if (dias !== null) {
-      const color = dias <= 1 ? '#2e7d32' : (dias <= 3 ? '#b8860b' : '#c0392b');
-      const txt = dias === 0 ? 'hoy' : (dias === 1 ? '1 día' : dias + ' días');
-      badge = '<span style="color:' + color + ';font-weight:600;">⏱ ' + txt + '</span>';
-    }
-    return '<div class="fac-item" id="fac-' + escapeHtml(f.folio) + '">' +
-      '<div class="fac-head">' +
-        '<div><b>' + escapeHtml(f.folio) + '</b> · ' + escapeHtml(f.paciente) +
-          (f.perteneceA ? ' · <span style="font-weight:600;color:' + (f.perteneceA === 'Renasté' ? '#8e7456' : '#5a7a4e') + '">' + escapeHtml(f.perteneceA) + '</span>' : '') +
-        '</div>' +
-        '<div class="muted small">' + escapeHtml(f.fecha) + ' · ' + money(f.montoMXN) + ' MXN' + (badge ? ' · ' + badge : '') + '</div>' +
-      '</div>' +
-      '<div class="grid2" style="margin-top:10px;">' +
-        '<div class="form-group"><label class="lbl">No. de factura</label><input type="text" id="nf-' + escapeHtml(f.folio) + '" placeholder="Folio fiscal"></div>' +
-      '</div>' +
-      '<button class="btn btn-primary" style="margin-top:0;" onclick="guardarFactura(\'' + escapeHtml(f.folio) + '\', this)">Registrar factura</button>' +
-      '<div class="alert alert-error hidden" id="fmsg-' + escapeHtml(f.folio) + '"></div>' +
-    '</div>';
-  }).join('');
-}
-
-function volverACobro() {
-  hide('view-facturas'); hide('view-recibo'); hide('view-reportes'); hide('view-conciliacion'); hide('view-corte'); hide('view-balance'); hide('view-estado');
-  show('view-cobro');
-  hide('btn-volver-cobro');
-  const rol = catalogos.usuario && catalogos.usuario.rol ? catalogos.usuario.rol : 'cobros';
-  if (rol === 'admin' || rol === 'facturacion' || rol === 'facturación') {
-    show('btn-facturas'); show('btn-reportes'); show('btn-conciliacion'); show('btn-corte'); show('btn-balance');
-  }
-  window.scrollTo(0, 0);
-}
-
-function _ocultarBotonesNav() {
-  hide('btn-facturas'); hide('btn-reportes'); hide('btn-conciliacion'); hide('btn-corte'); hide('btn-balance');
-  show('btn-volver-cobro');
-}
-
-function abrirReportes() {
-  hide('view-cobro'); hide('view-recibo'); hide('view-facturas'); hide('view-estado'); hide('view-conciliacion'); hide('view-corte'); hide('view-balance');
-  show('view-reportes'); _ocultarBotonesNav();
-  const hoy = new Date().toISOString().slice(0, 10);
-  if (!$('repFecha').value) $('repFecha').value = hoy;
-  repTab('dia');
-  window.scrollTo(0, 0);
-}
-
-function abrirConciliacion() {
-  hide('view-cobro'); hide('view-recibo'); hide('view-facturas'); hide('view-estado'); hide('view-reportes'); hide('view-corte'); hide('view-balance');
-  show('view-conciliacion'); _ocultarBotonesNav();
-  // por defecto, conciliar el día de ayer (el banco reporta al día siguiente)
-  const ayer = new Date(); ayer.setDate(ayer.getDate() - 1);
-  if (!$('concFecha').value) $('concFecha').value = ayer.toISOString().slice(0, 10);
-  $('concResultadoCard').style.display = 'none';
-  $('concMsg').textContent = '';
-  window.scrollTo(0, 0);
-}
-
-async function guardarFactura(folio, btn) {
-  const num = $('nf-' + folio).value.trim();
-  const fmsg = $('fmsg-' + folio);
-  fmsg.classList.add('hidden');
-  if (!num) { fmsg.textContent = 'Captura el número de factura.'; fmsg.classList.remove('hidden'); return; }
-
-  btn.disabled = true; btn.textContent = 'Registrando…';
-  const r = await callAPI('registrarFactura', { factura: { folio, numFactura: num } });
-  if (!r.ok) {
-    fmsg.textContent = r.error || 'No se pudo registrar.'; fmsg.classList.remove('hidden');
-    btn.disabled = false; btn.textContent = 'Registrar factura';
-    return;
-  }
-  // Quitar la tarjeta de la lista (ya facturado)
-  const item = $('fac-' + folio);
-  if (item) {
-    item.innerHTML = '<div class="fac-head"><div><b>' + escapeHtml(folio) + '</b> · facturado ✓</div>' +
-      '<div class="muted small">Factura ' + escapeHtml(num) + ' · ' + escapeHtml(r.fechaFactura || '') + '</div></div>';
-    item.style.opacity = '0.6';
-  }
-}
-
-// ============================================================
-// MENSAJES Y VALIDACIÓN VISUAL
-// ============================================================
-function showMsg(m) {
-  const e = $('msg');
-  if (e) { e.textContent = m; e.classList.remove('hidden'); }
-  return false;
-}
-function hideMsg() {
-  const e = $('msg');
-  if (e) e.classList.add('hidden');
-}
-// Marca un campo en rojo
-function marcarError(id) {
-  const el = $(id);
-  if (!el) return;
-  const grupo = el.closest('.form-group') || el;
-  grupo.classList.add('campo-error');
-  el.classList.add('campo-error');
-}
-// Limpia todos los resaltados de error
-function limpiarErrores() {
-  document.querySelectorAll('.campo-error').forEach(el => el.classList.remove('campo-error'));
-}
-
-
-/* === COTIZACIONES (Cirugía exige cotización aceptada) === */
-
-async function cargarCotizaciones() {
-  COT_ELEGIDA = null;
-  COTIZACIONES_PAC = [];
-  const box = $('cotizacionBox');
-  const sel = $('cotizacionSel');
-  const info = $('cotizacionInfo');
-  box.classList.remove('hidden');
-  if (!PAC) {
-    sel.innerHTML = '<option value="">— selecciona primero al paciente —</option>';
-    info.textContent = '';
-    return;
-  }
-  sel.innerHTML = '<option value="">Cargando cotizaciones…</option>';
-  info.textContent = '';
-  const r = await callAPI('cotizacionesPaciente', { idPaciente: PAC.id });
-  if (!r.ok || !r.data || !r.data.length) {
-    sel.innerHTML = '<option value="">— sin cotización aceptada —</option>';
-    info.innerHTML = '<span style="color:var(--error)">Este paciente no tiene una cotización aceptada. No se puede cobrar cirugía hasta generarla en el cotizador.</span>';
-    return;
-  }
-  COTIZACIONES_PAC = r.data;
-  const money = n => '$' + Number(n).toLocaleString('es-MX', { minimumFractionDigits: 2 });
-  sel.innerHTML = '<option value="">— elegir cotización —</option>' + r.data.map(c =>
-    '<option value="' + escapeHtml(c.cotizacionId) + '">' +
-      escapeHtml(c.cotizacionId) + ' · ' + money(c.granTotal) + ' · ' + escapeHtml((c.procedimientos || []).join(', ')) +
-    '</option>'
-  ).join('');
-}
-
-function onElegirCotizacion() {
-  const id = $('cotizacionSel').value;
-  const info = $('cotizacionInfo');
-  const c = COTIZACIONES_PAC.find(x => x.cotizacionId === id);
-  if (!c) {
-    COT_ELEGIDA = null; TRAT_ELEGIDO = null;
-    info.textContent = '';
-    hide('cotizacionSaldo'); hide('cotizacionAcciones');
-    $('tratamiento').value = ''; $('tratamiento').readOnly = false;
-    $('precioLista').value = ''; $('monto').value = '';
-    return;
-  }
-  COT_ELEGIDA = c;
-  const money = n => '$' + Number(n).toLocaleString('es-MX', { minimumFractionDigits: 2 });
-  const bucket = (c.bucketClinica != null) ? c.bucketClinica : (c.granTotal - c.honorariosTotal);
-  info.innerHTML =
-    'Honorarios Dr: <b>' + money(c.honorariosTotal) + '</b> · Bucket clínica: <b>' + money(bucket) + '</b> · Gran Total: <b>' + money(c.granTotal) + '</b>' +
-    '<br>Procedimientos: ' + escapeHtml((c.procedimientos || []).join(', '));
-  // Estado de cuenta resumido
-  const abonado = c.abonado || 0;
-  const saldo = (c.saldoPendiente != null) ? c.saldoPendiente : c.granTotal;
-  const sBox = $('cotizacionSaldo');
-  sBox.innerHTML = 'Abonado: <b>' + money(abonado) + '</b> &nbsp;·&nbsp; Saldo pendiente: <b style="color:var(--accent-dark)">' + money(saldo) + '</b>' +
-    '<div class="muted small" style="margin-top:4px;">Captura abajo el <b>monto del abono</b>, o marca "Liquidar el saldo" para cobrar todo lo pendiente.</div>';
-  sBox.classList.remove('hidden');
-  show('cotizacionAcciones');
-  $('liquidarSplit').checked = false;
-  // Por default es un abono: condición "Anticipo" y monto a capturar (no se sugiere el total)
-  $('condicion').value = 'Anticipo';
-  $('condicion').disabled = false;
-  // Si la cotización ya tiene pagos previos, reusar y bloquear los datos generales del primer cobro
-  if (c.tienePagos && c.datosGenerales) {
-    const dg = c.datosGenerales;
-    if (dg.medico) $('medico').value = dg.medico;
-    if (dg.operativo) $('operativo').value = dg.operativo;
-    if (dg.prospecta) $('prospecta').value = dg.prospecta;
-    if (dg.cierra) $('cierra').value = dg.cierra;
-    ['medico', 'operativo', 'prospecta', 'cierra'].forEach(id => { $(id).disabled = true; });
-    DATOS_BLOQUEADOS = true;
-  } else {
-    DATOS_BLOQUEADOS = false;
-    // Primer cobro: operativo/prospecta/cierra editables (médico queda fijo por ser cirugía)
-    ['operativo', 'prospecta', 'cierra'].forEach(id => { $(id).disabled = false; });
-  }
-  // El "tratamiento" pasa a ser la etiqueta del paquete; el monto lo captura recepción (abono)
-  const label = (c.procedimientos || []).join(' + ') || ('Paquete ' + c.cotizacionId);
-  $('tratamiento').value = label;
-  $('tratamiento').readOnly = true;
-  $('precioLista').value = c.granTotal;
-  $('monto').value = '';
-  $('monto').placeholder = 'Monto del abono (saldo: ' + money(saldo) + ')';
-  TRAT_ELEGIDO = { nombre: label, costo: c.granTotal, linea: 'Cirugía' };
-}
-
-/* === ESTADO DE CUENTA (imprimible/compartible) === */
-
-async function abrirEstadoCuenta() {
-  if (!COT_ELEGIDA) return showMsg('Selecciona primero una cotización aceptada.');
-  hide('view-cobro'); hide('view-recibo'); hide('view-facturas');
-  show('view-estado');
-  window.scrollTo(0, 0);
-  $('estadoArea').innerHTML = '<div class="muted small">Cargando estado de cuenta…</div>';
-  const r = await callAPI('estadoCuenta', { cotizacionId: COT_ELEGIDA.cotizacionId, idPaciente: (PAC ? PAC.id : '') });
-  if (!r.ok) { $('estadoArea').innerHTML = '<div class="alert alert-error">' + escapeHtml(r.error || 'Error') + '</div>'; return; }
-  pintarEstadoCuenta(r.data);
-}
-
-function pintarEstadoCuenta(d) {
-  ESTADO_ACTUAL = d;
-  const money = n => '$' + Number(n).toLocaleString('es-MX', { minimumFractionDigits: 2 });
-  let filasAbonos;
-  if (d.abonos && d.abonos.length) {
-    filasAbonos = d.abonos.map(a =>
-      '<tr><td>' + escapeHtml(a.fecha) + '</td>' +
-      '<td>' + escapeHtml(a.formaPago || '') + (a.terminal ? ' · ' + escapeHtml(a.terminal) : '') + '</td>' +
-      '<td style="text-align:right;">' + money(a.monto) + '</td></tr>'
-    ).join('');
-  } else {
-    filasAbonos = '<tr><td colspan="3" class="muted small">Sin abonos registrados aún.</td></tr>';
-  }
-  $('estadoArea').innerHTML =
-    '<div class="recibo">' +
-      '<div class="rb-h">' +
-        '<div><div class="brand">DR. MIGUEL SOTO</div><div class="sub">Cirujano Plástico Certificado</div></div>' +
-        '<div><div class="doc-tag">Estado de cuenta</div><div class="folio">' + escapeHtml(d.cotizacionId) + '</div></div>' +
-      '</div>' +
-      '<table>' +
-        '<tr><td class="k">Paciente</td><td>' + escapeHtml(d.paciente || '') + '</td></tr>' +
-        '<tr><td class="k">Procedimiento(s)</td><td>' + escapeHtml((d.procedimientos || []).join(', ')) + '</td></tr>' +
-        '<tr><td class="k">Estado</td><td>' + escapeHtml(d.estado || '') + '</td></tr>' +
-      '</table>' +
-      '<div style="margin:18px 0 6px;font-weight:600;">Pagos registrados</div>' +
-      '<table>' +
-        '<tr><td class="k">Fecha</td><td class="k">Forma de pago</td><td class="k" style="text-align:right;">Monto</td></tr>' +
-        filasAbonos +
-      '</table>' +
-      '<table style="margin-top:16px;">' +
-        '<tr><td class="k">Gran Total</td><td style="text-align:right;">' + money(d.granTotal) + '</td></tr>' +
-        '<tr><td class="k">Total abonado</td><td style="text-align:right;">' + money(d.abonado) + '</td></tr>' +
-        '<tr><td class="k total">Saldo pendiente</td><td class="total" style="text-align:right;">' + money(d.saldo) + '</td></tr>' +
-      '</table>' +
-      '<div class="pie">Estado de cuenta al ' + escapeHtml(new Date().toLocaleString('es-MX')) + '. Refleja los pagos registrados a la fecha de impresión.</div>' +
-    '</div>';
-}
-
-function imprimirEstado() { window.print(); }
-function volverDeEstado() {
-  hide('view-estado'); hide('view-recibo'); hide('view-facturas');
-  show('view-cobro');
-  window.scrollTo(0, 0);
-}
-async function enviarEstadoCorreo(btn) {
-  const d = ESTADO_ACTUAL;
-  if (!d) return;
-  const msg = $('estadoMsg');
-  msg.style.color = '';
-  msg.textContent = 'Enviando estado de cuenta por correo…';
-  if (btn) btn.disabled = true;
-  const r = await callAPI('enviarEstadoCorreo', { cotizacionId: d.cotizacionId, idPaciente: (d.pacienteId || (PAC ? PAC.id : '')) });
-  if (btn) btn.disabled = false;
-  if (!r.ok) {
-    msg.style.color = 'var(--error)';
-    msg.textContent = r.error || 'No se pudo enviar el correo.';
-    return;
-  }
-  msg.style.color = 'var(--success)';
-  msg.textContent = '✓ Estado de cuenta enviado a ' + r.email + ((r.desde && r.desde.indexOf('@') < 0) ? ' (desde la cuenta del sistema)' : '');
-}
-
-/* === SPLIT CIRUGÍA — Multi-Entidad === */
-
-let _splitCirugiaPending = null;
-
-function mostrarModalSplitCirugia(terminalDrSugerida) {
-  if (!COT_ELEGIDA) {
-    return showMsg('Selecciona la cotización aceptada antes de cobrar la cirugía.');
-  }
-  const c = COT_ELEGIDA;
-  const money = n => '$' + Number(n).toLocaleString('es-MX', { minimumFractionDigits: 2 });
-  const label = (c.procedimientos || []).join(' + ') || ('Paquete ' + c.cotizacionId);
-  $('splitTrat').textContent = label + ' (' + c.cotizacionId + ')';
-
-  const usaPropioSplit = $('pagoDistinto').checked;
-  const metodoSplit = usaPropioSplit ? $('metodoTrat').value : $('metodo').value;
-  const esEfectivoSplit = (metodoSplit === 'Efectivo');
-  const saldo = (c.saldoPendiente != null) ? c.saldoPendiente : c.granTotal;
-
-  let montoDr, montoRen, terminalesDr, terminalesRen, defaultDr, defaultRen;
-  if (esEfectivoSplit) {
-    // EFECTIVO: cada caja recibe su monto REAL (sin deuda). Caja Dr = lo que de verdad le toca al Dr.
-    const cajaDrTotal = (c.drRecibeEfectivo != null) ? c.drRecibeEfectivo : (c.honorariosTotal || 0);
-    const recDr = c.recibidoDr || 0;
-    montoDr = Math.max(0, Math.min(saldo, Math.round((cajaDrTotal - recDr) * 100) / 100));
-    montoRen = Math.round((saldo - montoDr) * 100) / 100;
-    $('splitLblDr').textContent = 'Caja Dr. Miguel Soto';
-    $('splitLblRen').textContent = 'Caja Renasté';
-    terminalesDr = ['Efectivo Dr.'];
-    terminalesRen = ['Efectivo Renasté'];
-    defaultDr = 'Efectivo Dr.';
-    defaultRen = 'Efectivo Renasté';
-  } else {
-    // ELECTRÓNICO: honorarios → Dr, bucket → Renasté (se reconcilia con deuda a fin de mes)
-    montoDr = (c.honPendiente != null) ? c.honPendiente : c.honorariosTotal;
-    montoRen = (c.bucketPendiente != null) ? c.bucketPendiente : ((c.bucketClinica != null) ? c.bucketClinica : (c.granTotal - c.honorariosTotal));
-    $('splitLblDr').textContent = 'Honorarios Dr.';
-    $('splitLblRen').textContent = 'Bucket Clínica';
-    // Ambas porciones pueden cobrarse en CUALQUIER terminal (Dr o Renasté).
-    // Si el bucket lo cobra una terminal del Dr, se genera deuda Dr→Renasté y se ahorra IVA.
-    // Si los honorarios los cobra una terminal Renasté, se genera deuda Renasté→Dr.
-    const todasElec = ['Multiva MS', 'Multiva Amex', 'Mercado Pago', 'HSBC', 'Multiva', 'Santander', 'PayPal', 'Zelle', 'Multiva Renasté', 'Cuenta Renasté'];
-    terminalesDr = todasElec;
-    terminalesRen = todasElec;
-    defaultDr = (terminalDrSugerida && terminalesDr.indexOf(terminalDrSugerida) >= 0) ? terminalDrSugerida : 'Multiva MS';
-    defaultRen = 'Multiva Renasté';
-  }
-
-  $('splitHon').textContent = money(montoDr);
-  $('splitBck').textContent = money(montoRen);
-  const selDr = $('splitTermDr');
-  selDr.innerHTML = terminalesDr.map(function(t){ return '<option value="'+t+'">'+t+'</option>'; }).join('');
-  selDr.value = defaultDr;
-  const selRen = $('splitTermRen');
-  selRen.innerHTML = terminalesRen.map(function(t){ return '<option value="'+t+'">'+t+'</option>'; }).join('');
-  selRen.value = defaultRen;
-
-  _splitCirugiaPending = { honorarios: montoDr, bucketClinica: montoRen, cotizacionId: c.cotizacionId, label: label, granTotal: c.granTotal };
-  show('modalSplitCirugia');
-}
-
-function cancelarSplitCirugia() {
-  hide('modalSplitCirugia');
-  _splitCirugiaPending = null;
-}
-
-function confirmarSplitCirugia() {
-  if (!_splitCirugiaPending) return;
-  const terminalDr = $('splitTermDr').value;
-  const terminalRen = $('splitTermRen').value;
-  if (!terminalDr) return showMsg('Selecciona la terminal del Dr (para honorarios).');
-  if (!terminalRen) return showMsg('Selecciona la terminal Renasté (para el bucket).');
-
-  const linea = 'Cirugía';
-  const tratamiento = _splitCirugiaPending.label;
-  const cotId = _splitCirugiaPending.cotizacionId;
-  const condicion = $('condicion').value;
-  const usaPropio = $('pagoDistinto').checked;
-  const metodo = usaPropio ? $('metodoTrat').value : $('metodo').value;
-  const moneda = usaPropio ? $('monedaTrat').value : $('moneda').value;
-  const tc = moneda === 'USD' ? parseFloat($('tc').value) : '';
-  const autoriza = $('autorizaDesc').value.trim();
-
-  const hon = Number(_splitCirugiaPending.honorarios) || 0;
-  const bck = Number(_splitCirugiaPending.bucketClinica) || 0;
-  const base = {
-    linea: linea, tratamiento: tratamiento, area: '',
-    condicion: condicion, esCortesia: false,
-    precioLista: _splitCirugiaPending.granTotal,
-    descuentoPct: '', descuentoMonto: '',
-    autorizaDesc: autoriza || '',
-    moneda: moneda, tipoCambio: tc, cotizacionId: cotId
-  };
-
-  if (hon > 0 && bck > 0 && terminalDr === terminalRen) {
-    // Mismo destino (un solo swipe/transacción) → UN SOLO cobro. El backend lo divide
-    // internamente en honorarios+bucket. Así solo pide UN voucher.
-    CARRITO.push(Object.assign({}, base, {
-      obsDescuento: 'Cirugía completa en ' + terminalDr + ' (split Cirugía · ' + cotId + ')',
-      monto: Math.round((hon + bck) * 100) / 100,
-      metodo: metodo, terminal: terminalDr
-    }));
-  } else {
-    // Destinos distintos → dos cobros (dos vouchers, son dos transacciones)
-    if (hon > 0) {
-      CARRITO.push(Object.assign({}, base, {
-        obsDescuento: 'Honorarios (split Cirugía · ' + cotId + ')',
-        monto: hon, metodo: metodo, terminal: terminalDr
-      }));
-    }
-    if (bck > 0) {
-      CARRITO.push(Object.assign({}, base, {
-        obsDescuento: 'Bucket clínica (split Cirugía · ' + cotId + ')',
-        monto: bck, metodo: metodo, terminal: terminalRen
-      }));
-    }
-  }
-
-  renderCarrito();
-  limpiarTratamiento();
-  hide('modalSplitCirugia');
-  _splitCirugiaPending = null;
-}
-
-// ============================================================
-// COMPROBANTES (evidencia al cobrar)
-// ============================================================
-const fmt$ = n => '$' + Number(n || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-// ⬇⬇ INTERRUPTOR: en pruebas = false (opcional). En producción cámbialo a true para EXIGIR comprobantes. ⬇⬇
-const COMPROBANTES_OBLIGATORIOS = false;
-
-let COMP_ITEMS = [];
-let RECIBO_IMPRESO = false;
-let COMPROBANTES_OK = true;
-
-// Habilita "Nuevo cobro" solo si ya se imprimió y (en producción) ya se subieron comprobantes
-function _gateNuevoCobro() {
-  const b = $('btnNuevoCobro'); const av = $('avisoImprimir');
-  if (!b) return;
-  const faltaImpr = !RECIBO_IMPRESO;
-  const faltaComp = COMPROBANTES_OBLIGATORIOS && !COMPROBANTES_OK;
-  b.disabled = faltaImpr || faltaComp;
-  if (av) {
-    if (faltaImpr) av.textContent = 'Debes imprimir el recibo antes de continuar al siguiente cobro.';
-    else if (faltaComp) av.textContent = 'Sube los comprobantes de pago antes de continuar.';
-    else av.textContent = 'Listo. Ya puedes continuar al siguiente cobro.';
-  }
-}
-
-function _tipoComprobante(metodo) {
-  const m = String(metodo || '').toLowerCase();
-  if (/efectivo/.test(m)) return { tipo: 'efectivo', label: 'Recibo de efectivo firmado por Dr. Miguel Soto', icon: '🧾' };
-  if (/transfer|spei|dep[oó]sito|ficha/.test(m)) return { tipo: 'transferencia', label: 'Comprobante de transferencia / ficha de depósito', icon: '🏦' };
-  if (/tarjeta|tpv|terminal|pos|cr[eé]dito|d[eé]bito|amex|visa|master/.test(m)) return { tipo: 'voucher', label: 'Voucher de la terminal bancaria', icon: '💳' };
-  return { tipo: 'comprobante', label: 'Comprobante de pago', icon: '📎' };
-}
-
-function renderComprobantes(recibos, cobros, comun) {
-  COMP_ITEMS = [];
-  const cont = $('comprobantesArea');
-  let html = '';
-  recibos.forEach((rec, i) => {
-    const c = cobros[i] || {};
-    const monto = Number(rec.montoMXN || 0);
-    const metodo = rec.metodo || c.metodo || '';
-    if (monto <= 0 || /cortes/i.test(metodo) || /cortes/i.test(c.condicion || '')) return; // cortesías sin comprobante
-    if (/efectivo/i.test(metodo)) return; // EFECTIVO no lleva comprobante por cobro: va al corte de caja
-    const t = _tipoComprobante(metodo);
-    const terminal = c.terminal || '';
-    const idx = COMP_ITEMS.length;
-    COMP_ITEMS.push({
-      inputId: 'comp-file-' + idx,
-      folioREC: rec.folio || '', folioME: rec.folioME || '',
-      pacienteId: comun.idPaciente || '', pacienteNombre: comun.nombrePaciente || '',
-      tipo: t.tipo, metodo: metodo, terminal: terminal, montoMXN: monto,
-      fecha: rec.fecha || '', capturedFile: null
-    });
-    html +=
-      '<div class="comp-row" style="border:1px solid var(--border-soft);border-radius:6px;padding:10px 12px;margin-bottom:8px;">' +
-        '<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;">' +
-          '<div><b>' + t.icon + ' ' + escapeHtml(t.label) + '</b>' +
-            (terminal ? ' <span class="muted small">(' + escapeHtml(terminal) + ')</span>' : '') +
-            '<div class="muted small">' + escapeHtml((c.linea || '') + (c.tratamiento ? ' · ' + c.tratamiento : '')) + ' · ' + escapeHtml(rec.folio || '') + '</div>' +
-          '</div>' +
-          '<div style="font-weight:600;">' + fmt$(monto) + '</div>' +
-        '</div>' +
-        '<div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap;">' +
-          '<input type="file" id="comp-file-' + idx + '" accept="image/*,application/pdf" capture="environment" onchange="document.getElementById(\'comp-cam-' + idx + '\').textContent=\'\';">' +
-          '<button type="button" class="btn btn-secondary" style="width:auto;margin-top:0;padding:6px 12px;" onclick="tomarFotoComprobante(' + idx + ')">📷 Tomar foto</button>' +
-          '<span class="muted small" id="comp-cam-' + idx + '"></span>' +
-        '</div>' +
-      '</div>';
-  });
-  if (!COMP_ITEMS.length) { hide('comprobantesCard'); COMPROBANTES_OK = true; _gateNuevoCobro(); return; }
-  cont.innerHTML = html;
-  COMPROBANTES_OK = false; // hay comprobantes por subir
-  const nota = $('comprobantesNota');
-  if (nota) nota.textContent = COMPROBANTES_OBLIGATORIOS
-    ? 'Obligatorio: adjunta la evidencia de cada pago antes de continuar. (El efectivo se concilia en el Corte de caja.)'
-    : 'Opcional durante pruebas — puedes continuar sin subir foto. El efectivo va al Corte de caja, no aquí.';
-  $('comprobantesMsg').textContent = '';
-  $('btnSubirComprobantes').disabled = false;
-  $('btnSubirComprobantes').textContent = 'Subir comprobantes';
-  show('comprobantesCard');
-  _gateNuevoCobro();
-}
-
-function _fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const res = String(reader.result || '');
-      const comma = res.indexOf(',');
-      resolve({ base64: comma >= 0 ? res.slice(comma + 1) : res, mime: file.type || 'application/octet-stream', name: file.name || 'comprobante' });
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
-async function subirComprobantes() {
-  const btn = $('btnSubirComprobantes');
-  const msg = $('comprobantesMsg');
-  const evidencias = [];
-  for (const it of COMP_ITEMS) {
-    const inp = $(it.inputId);
-    const file = (it.capturedFile) || (inp && inp.files && inp.files[0]) || null;
-    if (file) {
-      const f = await _fileToBase64(file);
-      evidencias.push({
-        fecha: it.fecha, folioREC: it.folioREC, folioME: it.folioME,
-        pacienteId: it.pacienteId, pacienteNombre: it.pacienteNombre,
-        tipo: it.tipo, metodo: it.metodo, terminal: it.terminal, montoMXN: it.montoMXN,
-        fileBase64: f.base64, fileName: (it.tipo + '_' + it.folioREC + '_' + f.name).replace(/\s+/g, '_'), mimeType: f.mime
-      });
-    }
-  }
-  if (!evidencias.length) { msg.style.color = 'var(--error)'; msg.textContent = 'Selecciona al menos una foto antes de subir.'; return; }
-  btn.disabled = true; btn.textContent = 'Subiendo…';
-  const r = await callAPI('subirEvidencia', { evidencias });
-  if (!r.ok) { btn.disabled = false; btn.textContent = 'Subir comprobantes'; msg.style.color = 'var(--error)'; msg.textContent = r.error || 'No se pudieron subir.'; return; }
-  msg.style.color = 'var(--success)';
-  msg.textContent = '✓ ' + r.guardados + ' comprobante(s) guardado(s) en Drive y ligado(s) al folio.';
-  btn.textContent = '✓ Comprobantes subidos';
-  COMPROBANTES_OK = true;
-  _gateNuevoCobro();
-}
-
-// ============================================================
-// CÁMARA WEB (getUserMedia)
-// ============================================================
-let _camStream = null, _camCallback = null;
-async function openCamera(titulo, onCapture) {
-  _camCallback = onCapture;
-  $('camTitulo').textContent = titulo || 'Tomar foto';
-  $('camMsg').textContent = ''; $('camMsg').style.color = '';
-  show('modalCamara');
-  try {
-    _camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
-    $('camVideo').srcObject = _camStream;
-  } catch (e) {
-    $('camMsg').style.color = 'var(--error)';
-    $('camMsg').textContent = 'No se pudo abrir la cámara (' + (e.message || e) + '). Cierra y usa "Subir archivo".';
-  }
-}
-function capturarFoto() {
-  const v = $('camVideo'), cv = $('camCanvas');
-  if (!v.videoWidth) { $('camMsg').textContent = 'La cámara aún no está lista, espera un momento…'; return; }
-  cv.width = v.videoWidth; cv.height = v.videoHeight;
-  cv.getContext('2d').drawImage(v, 0, 0);
-  cv.toBlob(blob => {
-    const file = new File([blob], 'foto_' + Date.now() + '.jpg', { type: 'image/jpeg' });
-    const cb = _camCallback;
-    cerrarCamara();
-    if (cb) cb(file);
-  }, 'image/jpeg', 0.85);
-}
-function cerrarCamara() {
-  if (_camStream) { _camStream.getTracks().forEach(t => t.stop()); _camStream = null; }
-  $('camVideo').srcObject = null;
-  _camCallback = null;
-  hide('modalCamara');
-}
-function tomarFotoComprobante(idx) {
-  openCamera('Foto del voucher', (file) => {
-    COMP_ITEMS[idx].capturedFile = file;
-    const inp = $(COMP_ITEMS[idx].inputId); if (inp) inp.value = '';
-    const lbl = $('comp-cam-' + idx);
-    if (lbl) { lbl.style.color = 'var(--success)'; lbl.textContent = '✓ Foto capturada'; }
-  });
-}
-
-// ============================================================
-// CORTE DE EFECTIVO (firma de contraentrega del Dr.)
-// ============================================================
-let CORTE_FIRMA_FILE = null;
-let CORTE_PEND = null;
-
-// Recibo imprimible de entrega de efectivo (el Dr. lo firma al recibir; luego se sube la foto)
-function imprimirReciboEntrega() {
-  const r = CORTE_PEND;
-  if (!r || !(r.numMov > 0)) { alert('No hay efectivo pendiente de entrega.'); return; }
-  const m = n => '$' + Number(n || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const ahora = new Date();
-  const fechaHora = ahora.toLocaleString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-  let periodo = '';
-  if (r.porDia && r.porDia.length) {
-    const f0 = r.porDia[0].fecha, f1 = r.porDia[r.porDia.length - 1].fecha;
-    periodo = (f0 === f1) ? f0 : (f0 + ' a ' + f1);
-  }
-  const filasDia = (r.porDia || []).map(d =>
-    '<tr><td>' + d.fecha + '</td><td style="text-align:right;">' + m(d.dr) + '</td><td style="text-align:right;">' + m(d.renaste) + '</td><td style="text-align:right;font-weight:bold;">' + m(d.total) + '</td></tr>'
-  ).join('');
-
-  const html =
-    '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Recibo de entrega de efectivo</title>' +
-    '<style>' +
-    'body{font-family:Georgia,serif;color:#1a1a1a;padding:40px;max-width:720px;margin:0 auto;}' +
-    '.hd{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #1a1a1a;padding-bottom:12px;margin-bottom:4px;}' +
-    '.brand{font-size:20px;font-weight:bold;letter-spacing:0.5px;}.sub{font-size:11px;letter-spacing:2px;color:#888;}' +
-    '.doc{text-align:right;}.doc .t{font-size:11px;letter-spacing:2px;color:#888;}.doc .n{font-size:18px;font-weight:bold;}' +
-    'h1{font-size:17px;margin:22px 0 4px;}' +
-    'table{width:100%;border-collapse:collapse;margin:10px 0;font-size:14px;}' +
-    'th,td{padding:8px 10px;border-bottom:1px solid #ddd;text-align:left;}' +
-    'th{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#888;}' +
-    '.tot td{font-weight:bold;font-size:16px;border-top:2px solid #1a1a1a;border-bottom:none;}' +
-    '.cajas td{font-size:15px;}' +
-    '.firma{margin-top:60px;display:flex;justify-content:space-between;gap:40px;}' +
-    '.firma .l{flex:1;text-align:center;}.firma .line{border-top:1px solid #1a1a1a;margin-bottom:6px;}' +
-    '.firma .nm{font-weight:bold;}.firma .rl{font-size:11px;color:#888;letter-spacing:1px;text-transform:uppercase;}' +
-    '.pie{margin-top:34px;font-size:11px;color:#888;font-style:italic;}' +
-    '@media print{body{padding:24px;}}' +
-    '</style></head><body>' +
-    '<div class="hd"><div><div class="brand">DR. MIGUEL SOTO · RENASTÉ</div><div class="sub">CIRUJANO PLÁSTICO CERTIFICADO</div></div>' +
-      '<div class="doc"><div class="t">RECIBO DE ENTREGA DE EFECTIVO</div><div class="n">' + fechaHora + '</div></div></div>' +
-    '<h1>Entrega de efectivo</h1>' +
-    '<div style="font-size:13px;color:#555;">Periodo cubierto: <b>' + (periodo || fechaHora) + '</b> · Movimientos: <b>' + r.numMov + '</b></div>' +
-    '<table class="cajas"><tbody>' +
-      '<tr><td>Caja Dr. Miguel Soto</td><td style="text-align:right;font-weight:bold;">' + m(r.totalDr) + '</td></tr>' +
-      '<tr><td>Caja Renasté</td><td style="text-align:right;font-weight:bold;">' + m(r.totalRenaste) + '</td></tr>' +
-      '<tr class="tot"><td>TOTAL ENTREGADO</td><td style="text-align:right;">' + m(r.total) + '</td></tr>' +
-    '</tbody></table>' +
-    (filasDia ? '<table><thead><tr><th>Día</th><th style="text-align:right;">Caja Dr.</th><th style="text-align:right;">Caja Renasté</th><th style="text-align:right;">Total</th></tr></thead><tbody>' + filasDia + '</tbody></table>' : '') +
-    '<div class="firma">' +
-      '<div class="l"><div style="height:40px;"></div><div class="line"></div><div class="nm">Dr. Miguel Soto</div><div class="rl">Recibí de conformidad</div></div>' +
-      '<div class="l"><div style="height:40px;"></div><div class="line"></div><div class="nm">Entregó</div><div class="rl">Nombre y firma</div></div>' +
-    '</div>' +
-    '<div class="pie">Documento de control interno. El Dr. firma al recibir el efectivo; este recibo firmado se fotografía y se sube al sistema en el Corte de caja.</div>' +
-    '</body></html>';
-
-  const w = window.open('', '_blank');
-  if (!w) { alert('Permite las ventanas emergentes para imprimir el recibo.'); return; }
-  w.document.open(); w.document.write(html); w.document.close();
-  w.focus();
-  setTimeout(function () { try { w.print(); } catch (e) {} }, 350);
-}
-function abrirCorte() {
-  hide('view-cobro'); hide('view-recibo'); hide('view-facturas'); hide('view-estado'); hide('view-reportes'); hide('view-conciliacion'); hide('view-balance');
-  show('view-corte'); _ocultarBotonesNav();
-  cargarCorte();
-  window.scrollTo(0, 0);
-}
-
-// ============================================================
-// BALANCE DE DEUDA Dr <-> Renasté
-// ============================================================
-function abrirBalance() {
-  hide('view-cobro'); hide('view-recibo'); hide('view-facturas'); hide('view-estado'); hide('view-reportes'); hide('view-conciliacion'); hide('view-corte');
-  show('view-balance'); _ocultarBotonesNav();
-  cargarBalance();
-  window.scrollTo(0, 0);
-}
-async function cargarBalance() {
-  const cont = $('balanceArea');
-  cont.innerHTML = '<div class="muted small">Calculando balance…</div>';
-  const r = await callAPI('balanceDeuda');
-  if (!r.ok) { cont.innerHTML = '<div class="alert alert-error">' + escapeHtml(r.error || 'Error') + '</div>'; return; }
-  renderBalance(r);
-}
-function renderBalance(r) {
-  const hayDeuda = r.numPendientes > 0 && r.neto > 0.005;
-  let resumen;
-  if (!hayDeuda) {
-    resumen = '<div style="text-align:center;padding:10px 0;"><div style="font-size:1.3rem;font-weight:700;color:var(--success);">Balance en cero</div><div class="muted small">No hay deuda pendiente entre las entidades.</div></div>';
-  } else {
-    const quienDebe = r.aFavorDe === 'Dr. Miguel Soto' ? 'Renasté' : 'Dr. Miguel Soto';
-    resumen =
-      '<div style="text-align:center;padding:6px 0;">' +
-        '<div class="muted small">Resultado neto</div>' +
-        '<div style="font-size:1.5rem;font-weight:700;margin:4px 0;">' + escapeHtml(quienDebe) + ' le debe a ' + escapeHtml(r.aFavorDe) + '</div>' +
-        '<div style="font-size:2rem;font-weight:800;color:var(--brand,#8e7456);">' + fmt$(r.neto) + '</div>' +
-      '</div>';
-  }
-  let detalle = '';
-  if (r.pendientes && r.pendientes.length) {
-    const body = r.pendientes.map(d => '<tr><td>' + escapeHtml(d.fecha) + '</td><td>' + escapeHtml(d.folioId) + '</td><td>' + escapeHtml(d.deudor) + '</td><td>' + escapeHtml(d.acreedor) + '</td><td style="text-align:right;">' + fmt$(d.monto) + '</td><td class="muted small">' + escapeHtml(d.razon) + '</td></tr>').join('');
-    detalle = '<div style="margin-top:14px;"><div style="font-weight:600;margin-bottom:4px;">Deudas pendientes (' + r.numPendientes + ')</div>' +
-      '<table class="rep-tbl"><thead><tr><th>Fecha</th><th>Folio</th><th>Debe</th><th>A favor de</th><th style="text-align:right;">Monto</th><th>Motivo</th></tr></thead><tbody>' + body + '</tbody></table></div>';
-  }
-  let hist = '';
-  if (r.liquidaciones && r.liquidaciones.length) {
-    const hb = r.liquidaciones.map(l => '<tr><td>' + escapeHtml(l.fecha) + '</td><td>' + escapeHtml(l.aFavorDe) + '</td><td style="text-align:right;">' + fmt$(l.montoNeto) + '</td><td style="text-align:center;">' + l.numDeudas + '</td><td class="muted small">' + escapeHtml(l.nota || '') + '</td></tr>').join('');
-    hist = '<div style="margin-top:20px;"><div style="font-weight:600;margin-bottom:4px;">Historial de liquidaciones</div>' +
-      '<table class="rep-tbl"><thead><tr><th>Fecha</th><th>A favor de</th><th style="text-align:right;">Neto saldado</th><th style="text-align:center;">Deudas</th><th>Nota</th></tr></thead><tbody>' + hb + '</tbody></table></div>';
-  }
-  $('balanceArea').innerHTML =
-    '<div class="rep-doc"><div class="rep-head"><div><div class="brand">Balance de deuda</div><div class="sub">Dr. Miguel Soto ↔ Renasté</div></div></div>' +
-    resumen +
-    '<table class="rep-tbl" style="margin-top:12px;"><tbody>' +
-      '<tr><td>Renasté le debe al Dr. (excedentes cobrados en terminal Renasté)</td><td style="text-align:right;font-weight:600;">' + fmt$(r.debeRenasteADr) + '</td></tr>' +
-      '<tr><td>El Dr. le debe a Renasté (cobrado de más en terminal del Dr.)</td><td style="text-align:right;font-weight:600;">' + fmt$(r.debeDrARenaste) + '</td></tr>' +
-    '</tbody></table>' + detalle + hist + '</div>';
-  $('balanceSaldarBox').style.display = hayDeuda ? 'block' : 'none';
-  $('balanceSinDeuda').style.display = hayDeuda ? 'none' : 'block';
-}
-async function saldarBalance() {
-  const btn = $('btnSaldarBalance'); const msg = $('balanceMsg'); msg.style.color = '';
-  if (!confirm('¿Saldar el balance a cero? Todas las deudas pendientes quedarán marcadas como liquidadas.')) return;
-  btn.disabled = true; btn.textContent = 'Saldando…';
-  const r = await callAPI('liquidarBalance', { nota: $('balanceNota').value.trim() });
-  btn.disabled = false; btn.textContent = 'Saldar a cero';
-  if (!r.ok) { msg.style.color = 'var(--error)'; msg.textContent = r.error || 'No se pudo saldar.'; return; }
-  msg.style.color = 'var(--success)';
-  msg.textContent = '✓ Balance saldado (' + r.liqId + ') · ' + fmt$(r.neto) + ' a favor de ' + r.aFavorDe + ' · ' + r.numDeudas + ' deuda(s) liquidada(s).';
-  $('balanceNota').value = '';
-  cargarBalance();
-}
-async function cargarCorte() {
-  const cont = $('corteArea');
-  cont.innerHTML = '<div class="muted small">Cargando efectivo pendiente…</div>';
-  CORTE_FIRMA_FILE = null;
-  const fin = $('corteFirmaFile'); if (fin) fin.value = '';
-  const fc = $('corte-cam-firma'); if (fc) fc.textContent = '';
-  const [r, h] = await Promise.all([callAPI('cortePendiente'), callAPI('historialCortes')]);
-  if (!r.ok) { cont.innerHTML = '<div class="alert alert-error">' + escapeHtml(r.error || 'Error') + '</div>'; return; }
-  renderCortePendiente(r, (h && h.ok) ? h.cortes : []);
-}
-function renderCortePendiente(r, cortes) {
-  CORTE_PEND = r;
-  const hayPend = r.numMov > 0;
-  let porDia = '';
-  if (r.porDia && r.porDia.length) {
-    const body = r.porDia.map(d => '<tr><td>' + escapeHtml(d.fecha) + '</td><td style="text-align:right;">' + fmt$(d.dr) + '</td><td style="text-align:right;">' + fmt$(d.renaste) + '</td><td style="text-align:right;font-weight:600;">' + fmt$(d.total) + '</td></tr>').join('');
-    porDia = '<table class="rep-tbl" style="margin-top:10px;"><thead><tr><th>Día</th><th style="text-align:right;">Caja Dr.</th><th style="text-align:right;">Caja Renasté</th><th style="text-align:right;">Total</th></tr></thead><tbody>' + body + '</tbody></table>';
-  }
-  let hist = '';
-  if (cortes && cortes.length) {
-    const hb = cortes.map(c => '<tr><td>' + escapeHtml(c.fecha) + '</td><td>' + escapeHtml(c.periodoDesde + ' → ' + c.periodoHasta) + '</td><td style="text-align:right;">' + fmt$(c.totalDr) + '</td><td style="text-align:right;">' + fmt$(c.totalRenaste) + '</td><td style="text-align:right;font-weight:600;">' + fmt$(c.total) + '</td><td>' + (c.firmaUrl ? '<a href="' + escapeHtml(c.firmaUrl) + '" target="_blank">firma</a>' : '—') + '</td></tr>').join('');
-    hist = '<div style="margin-top:20px;"><div style="font-weight:600;margin-bottom:4px;">Cortes anteriores</div><table class="rep-tbl"><thead><tr><th>Fecha corte</th><th>Periodo</th><th style="text-align:right;">Dr.</th><th style="text-align:right;">Renasté</th><th style="text-align:right;">Total</th><th>Firma</th></tr></thead><tbody>' + hb + '</tbody></table></div>';
-  }
-  $('corteArea').innerHTML =
-    '<div class="rep-doc"><div class="rep-head"><div><div class="brand">Corte de efectivo</div><div class="sub">Efectivo pendiente desde el último corte</div></div>' +
-      '<div style="text-align:right;"><div class="muted small">Total a entregar</div><div style="font-size:1.4rem;font-weight:700;">' + fmt$(r.total) + '</div></div></div>' +
-    '<table class="rep-tbl" style="margin-top:12px;"><tbody>' +
-      '<tr><td>Caja Dr. Miguel Soto</td><td style="text-align:right;font-weight:600;">' + fmt$(r.totalDr) + '</td></tr>' +
-      '<tr><td>Caja Renasté</td><td style="text-align:right;font-weight:600;">' + fmt$(r.totalRenaste) + '</td></tr>' +
-      '<tr><td>Movimientos</td><td style="text-align:right;">' + r.numMov + '</td></tr>' +
-    '</tbody></table>' + porDia + hist + '</div>';
-  $('corteFirmaBox').style.display = hayPend ? 'block' : 'none';
-  $('corteSinPend').style.display = hayPend ? 'none' : 'block';
-}
-function tomarFotoFirma() {
-  openCamera('Foto del recibo de corte firmado', (file) => {
-    CORTE_FIRMA_FILE = file;
-    const inp = $('corteFirmaFile'); if (inp) inp.value = '';
-    const lbl = $('corte-cam-firma');
-    if (lbl) { lbl.style.color = 'var(--success)'; lbl.textContent = '✓ Foto capturada'; }
-  });
-}
-async function registrarCorte() {
-  const btn = $('btnRegistrarCorte'); const msg = $('corteMsg'); msg.style.color = '';
-  const inp = $('corteFirmaFile');
-  const file = CORTE_FIRMA_FILE || (inp && inp.files && inp.files[0]) || null;
-  if (!file) { msg.style.color = 'var(--error)'; msg.textContent = 'Falta la foto del recibo firmado por el Dr.'; return; }
-  const f = await _fileToBase64(file);
-  btn.disabled = true; btn.textContent = 'Registrando corte…';
-  const r = await callAPI('registrarCorte', {
-    firmaBase64: f.base64, firmaMime: f.mime, firmaName: ('corte_firma_' + f.name).replace(/\s+/g, '_'),
-    observaciones: $('corteObs').value.trim()
-  });
-  btn.disabled = false; btn.textContent = 'Registrar corte';
-  if (!r.ok) { msg.style.color = 'var(--error)'; msg.textContent = r.error || 'No se pudo registrar el corte.'; return; }
-  msg.style.color = 'var(--success)';
-  msg.textContent = '✓ Corte ' + r.corteId + ' registrado · ' + fmt$(r.total) + ' (Dr. ' + fmt$(r.totalDr) + ' · Renasté ' + fmt$(r.totalRenaste) + ')';
-  $('corteObs').value = '';
-  cargarCorte();
-}
-
-// ============================================================
-// REPORTES
-// ============================================================
-let REP_MODO = 'dia';
-function repTab(modo) {
-  REP_MODO = modo;
-  document.querySelectorAll('.rep-tab').forEach(b => {
-    b.classList.toggle('btn-primary', b.dataset.rep === modo);
-    b.classList.toggle('btn-secondary', b.dataset.rep !== modo);
-  });
-  if (modo === 'dia') { show('repCtrlDia'); hide('repCtrlRango'); }
-  else {
-    hide('repCtrlDia'); show('repCtrlRango');
-    const hoy = new Date();
-    if (modo === 'semana') {
-      const d = new Date(hoy); const dow = (d.getDay() + 6) % 7; // lunes=0
-      const lun = new Date(d); lun.setDate(d.getDate() - dow);
-      const dom = new Date(lun); dom.setDate(lun.getDate() + 6);
-      $('repDesde').value = lun.toISOString().slice(0, 10);
-      $('repHasta').value = dom.toISOString().slice(0, 10);
-    } else { // mes
-      const ini = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-      const fin = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
-      $('repDesde').value = ini.toISOString().slice(0, 10);
-      $('repHasta').value = fin.toISOString().slice(0, 10);
-    }
-  }
-}
-
-function _isoToDMY(iso) { if (!iso) return ''; const p = iso.split('-'); return p[2] + '/' + p[1] + '/' + p[0]; }
-
-async function generarReporte() {
-  const msg = $('repMsg'); msg.style.color = ''; msg.textContent = 'Generando…';
-  let r;
-  if (REP_MODO === 'dia') {
-    const f = $('repFecha').value; if (!f) { msg.textContent = 'Elige una fecha.'; return; }
-    r = await callAPI('reporteDia', { fecha: _isoToDMY(f) });
-  } else {
-    const d = $('repDesde').value, h = $('repHasta').value;
-    if (!d || !h) { msg.textContent = 'Elige el rango de fechas.'; return; }
-    r = await callAPI('reporteRango', { desde: _isoToDMY(d), hasta: _isoToDMY(h), tipo: REP_MODO });
-  }
-  if (!r.ok) { msg.style.color = 'var(--error)'; msg.textContent = r.error || 'Error al generar.'; return; }
-  msg.textContent = '';
-  $('repResultadoCard').style.display = 'block';
-  $('repResultado').innerHTML = renderReporteHTML(r);
-  window.scrollTo(0, document.getElementById('repResultadoCard').offsetTop - 20);
-}
-
-function _tablaSimple(titulo, arr) {
-  if (!arr || !arr.length) return '';
-  let body = arr.map(x => '<tr><td>' + escapeHtml(x.nombre) + '</td><td style="text-align:right;">' + fmt$(x.monto) + '</td></tr>').join('');
-  return '<div style="margin-top:14px;"><div style="font-weight:600;margin-bottom:4px;">' + titulo + '</div>' +
-    '<table class="rep-tbl"><tbody>' + body + '</tbody></table></div>';
-}
-
-function renderReporteHTML(r) {
-  const esDia = r.tipo === 'dia';
-  const titulo = esDia ? ('Reporte del día · ' + escapeHtml(r.fecha))
-    : ((r.tipo === 'semana' ? 'Reporte semanal · ' : r.tipo === 'mes' ? 'Reporte mensual · ' : 'Reporte · ') + escapeHtml(r.desde) + ' — ' + escapeHtml(r.hasta));
-  let h = '<div class="rep-doc">';
-  h += '<div class="rep-head"><div><div class="brand">DR. MIGUEL SOTO · RENASTÉ</div><div class="sub">' + titulo + '</div></div>' +
-       '<div style="text-align:right;"><div class="muted small">Total cobrado</div><div style="font-size:1.4rem;font-weight:700;">' + fmt$(r.total) + '</div></div></div>';
-
-  // Entidad
-  h += _tablaSimple('Por entidad fiscal', r.porEntidad);
-
-  // IVA
-  if (r.iva) {
-    h += '<div style="margin-top:14px;"><div style="font-weight:600;margin-bottom:4px;">IVA (folios liquidados: ' + (r.iva.folios || 0) + ')</div>' +
-      '<table class="rep-tbl"><tbody>' +
-        '<tr><td>IVA enterado al SAT (Renasté)</td><td style="text-align:right;">' + fmt$(r.iva.ivaSAT) + '</td></tr>' +
-        '<tr><td>IVA liberado (al Dr.)</td><td style="text-align:right;">' + fmt$(r.iva.ivaLiberado) + '</td></tr>' +
-        '<tr><td>Dr. recibe (económico)</td><td style="text-align:right;">' + fmt$(r.iva.drRecibe) + '</td></tr>' +
-        '<tr><td>Clínica neta (económico)</td><td style="text-align:right;">' + fmt$(r.iva.clinicaNeta) + '</td></tr>' +
-      '</tbody></table></div>';
-  }
-
-  // Caja / terminal
-  if (r.porTerminal && r.porTerminal.length) {
-    let body = r.porTerminal.map(t => '<tr><td>' + escapeHtml(t.terminal) + (t.esEfectivo ? ' <span class="muted small">(efectivo)</span>' : '') + '</td><td>' + escapeHtml(t.entidad || '') + '</td><td style="text-align:right;">' + fmt$(t.monto) + '</td></tr>').join('');
-    h += '<div style="margin-top:14px;"><div style="font-weight:600;margin-bottom:4px;">Por caja / terminal</div>' +
-      '<table class="rep-tbl"><thead><tr><th>Terminal</th><th>Entidad</th><th style="text-align:right;">Monto</th></tr></thead><tbody>' + body + '</tbody></table></div>';
-  }
-
-  // Método
-  h += _tablaSimple('Por método de pago', r.porMetodo);
-  // Línea
-  h += _tablaSimple('Por línea de negocio', r.porLinea);
-
-  // Por día (rango)
-  if (r.porDia && r.porDia.length) {
-    let body = r.porDia.map(d => '<tr><td>' + escapeHtml(d.fecha) + '</td><td style="text-align:right;">' + fmt$(d.dr) + '</td><td style="text-align:right;">' + fmt$(d.renaste) + '</td><td style="text-align:right;font-weight:600;">' + fmt$(d.total) + '</td></tr>').join('');
-    h += '<div style="margin-top:14px;"><div style="font-weight:600;margin-bottom:4px;">Desglose por día</div>' +
-      '<table class="rep-tbl"><thead><tr><th>Fecha</th><th style="text-align:right;">Dr.</th><th style="text-align:right;">Renasté</th><th style="text-align:right;">Total</th></tr></thead><tbody>' + body + '</tbody></table></div>';
-  }
-
-  // Evidencia / conciliación (día)
-  if (esDia && r.evidencia) {
-    const ev = r.evidencia;
-    const tipos = Object.keys(ev.porTipo || {}).map(k => k + ': ' + ev.porTipo[k]).join(' · ') || 'sin comprobantes';
-    h += '<div style="margin-top:14px;"><div style="font-weight:600;margin-bottom:4px;">Comprobantes capturados</div>' +
-      '<div class="muted small">' + ev.total + ' archivo(s) · ' + escapeHtml(tipos) + '</div></div>';
-  }
-
-  // Detalle de movimientos (día)
-  if (esDia && r.movimientos && r.movimientos.length) {
-    let body = r.movimientos.map(m => '<tr><td>' + escapeHtml(m.paciente) + '</td><td>' + escapeHtml((m.linea || '') + (m.tratamiento ? ' · ' + m.tratamiento : '')) + '</td><td>' + escapeHtml(m.metodo) + '</td><td>' + escapeHtml(m.terminal) + '</td><td>' + escapeHtml(m.entidad) + '</td><td style="text-align:right;">' + fmt$(m.monto) + '</td></tr>').join('');
-    h += '<div style="margin-top:14px;"><div style="font-weight:600;margin-bottom:4px;">Detalle de movimientos del día</div>' +
-      '<table class="rep-tbl"><thead><tr><th>Paciente</th><th>Concepto</th><th>Método</th><th>Terminal</th><th>Entidad</th><th style="text-align:right;">Monto</th></tr></thead><tbody>' + body + '</tbody></table></div>';
-  }
-
-  // Diagnóstico cuando el total sale en $0 (para depurar fechas)
-  if (esDia && Number(r.total) === 0 && r.diag) {
-    const d = r.diag;
-    const filas = (d.ultimas || []).map(u =>
-      '<tr><td>' + escapeHtml(u.folio) + '</td><td>' + escapeHtml(u.fechaRaw) + '</td><td>' + escapeHtml(u.key || '—') + '</td><td>' + (u.coincide ? '✓' : '✗') + '</td><td>' + escapeHtml(u.linea) + '</td><td style="text-align:right;">' + fmt$(u.monto) + '</td></tr>'
-    ).join('');
-    h += '<div style="margin-top:16px;padding:10px;border:1px dashed var(--border);border-radius:6px;background:var(--bg-soft);">' +
-      '<div style="font-weight:600;">🔎 Diagnóstico (total $0)</div>' +
-      '<div class="muted small">Clave buscada: <b>' + escapeHtml(d.targetKey || '—') + '</b> · Zona horaria hoja: ' + escapeHtml(d.tz || '—') + ' · Filas totales: ' + (d.totalFilas || 0) + '</div>' +
-      (d.diag === undefined && !d.ultimas ? '<div class="muted small" style="color:var(--error);">El backend NO devolvió diagnóstico → no se desplegó la versión nueva del Code.gs.</div>' : '') +
-      '<table class="rep-tbl" style="margin-top:8px;"><thead><tr><th>Folio</th><th>Fecha cruda</th><th>Clave</th><th>¿Coincide?</th><th>Línea</th><th style="text-align:right;">Monto</th></tr></thead><tbody>' + filas + '</tbody></table>' +
-    '</div>';
-  } else if (esDia && Number(r.total) === 0 && !r.diag) {
-    h += '<div style="margin-top:16px;padding:10px;border:1px dashed var(--error);border-radius:6px;">' +
-      '<div class="muted small" style="color:var(--error);">⚠ El backend no devolvió diagnóstico. Esto significa que el <b>Code.gs nuevo no está desplegado</b> (Deploy → Manage deployments → ✏️ → New version).</div></div>';
-  }
-
-  h += '<div class="pie" style="margin-top:16px;">Generado ' + new Date().toLocaleString('es-MX') + ' · Sistema de Cobros</div>';
-  h += '</div>';
-  return h;
-}
-
-function imprimirReporte() { window.print(); }
-
-// ============================================================
-// CONCILIACIÓN
-// ============================================================
-let CONC_DATA = null;
-async function cargarConciliacion() {
-  const f = $('concFecha').value;
-  const msg = $('concMsg'); msg.style.color = '';
-  if (!f) { msg.textContent = 'Elige una fecha.'; return; }
-  msg.textContent = 'Cargando…';
-  const r = await callAPI('conciliacionDia', { fecha: _isoToDMY(f) });
-  if (!r.ok) { msg.style.color = 'var(--error)'; msg.textContent = r.error || 'Error.'; return; }
-  CONC_DATA = r; msg.textContent = '';
-  $('concResultadoCard').style.display = 'block';
-  renderConciliacion(r);
-  window.scrollTo(0, document.getElementById('concResultadoCard').offsetTop - 20);
-}
-
-function renderConciliacion(r) {
-  let body = (r.terminales || []).map((t, i) => {
-    const dif = t.diferencia;
-    const color = (dif == null) ? 'var(--muted)' : (Math.abs(dif) < 0.5 ? 'var(--success)' : 'var(--error)');
-    const estadoTxt = (dif == null) ? '—' : (Math.abs(dif) < 0.5 ? '✓ Cuadrado' : '⚠ ' + fmt$(dif));
-    return '<tr>' +
-      '<td>' + escapeHtml(t.terminal) + (t.esEfectivo ? ' <span class="muted small">(efectivo)</span>' : '') + '</td>' +
-      '<td>' + escapeHtml(t.entidad || '') + '</td>' +
-      '<td style="text-align:right;">' + fmt$(t.totalSistema) + '</td>' +
-      '<td style="text-align:right;"><input type="number" step="0.01" class="conc-banco" data-term="' + escapeHtml(t.terminal) + '" data-sis="' + t.totalSistema + '" value="' + (t.totalBanco == null ? '' : t.totalBanco) + '" style="width:120px;text-align:right;" oninput="recalcConcFila(this)"></td>' +
-      '<td style="text-align:right;color:' + color + ';font-weight:600;" id="conc-dif-' + i + '">' + estadoTxt + '</td>' +
-    '</tr>';
-  }).join('');
-  const pdfLink = r.bankPdfUrl ? '<div class="muted small" style="margin-top:8px;">📄 PDF del banco guardado: <a href="' + escapeHtml(r.bankPdfUrl) + '" target="_blank">abrir</a></div>' : '';
-  $('concResultado').innerHTML =
-    '<div class="rep-doc"><div class="rep-head"><div><div class="brand">Conciliación bancaria</div><div class="sub">' + escapeHtml(r.fecha) + '</div></div></div>' +
-    '<table class="rep-tbl" style="margin-top:12px;"><thead><tr><th>Terminal / caja</th><th>Entidad</th><th style="text-align:right;">Sistema</th><th style="text-align:right;">Banco</th><th style="text-align:right;">Estado</th></tr></thead>' +
-    '<tbody>' + (body || '<tr><td colspan="5" class="muted small">Sin movimientos ese día.</td></tr>') + '</tbody></table>' +
-    pdfLink + '</div>';
-}
-
-function recalcConcFila(inp) {
-  const sis = Number(inp.dataset.sis || 0);
-  const tr = inp.closest('tr');
-  const cell = tr.querySelector('td:last-child');
-  if (inp.value === '') { cell.textContent = '—'; cell.style.color = 'var(--muted)'; return; }
-  const dif = Math.round((Number(inp.value) - sis) * 100) / 100;
-  if (Math.abs(dif) < 0.5) { cell.textContent = '✓ Cuadrado'; cell.style.color = 'var(--success)'; }
-  else { cell.textContent = '⚠ ' + fmt$(dif); cell.style.color = 'var(--error)'; }
-}
-
-async function guardarConciliacion() {
-  const btn = $('btnGuardarConc'); const msg = $('concMsg'); msg.style.color = '';
-  const f = $('concFecha').value;
-  const terminales = Array.from(document.querySelectorAll('.conc-banco')).map(inp => ({
-    terminal: inp.dataset.term,
-    totalBanco: inp.value === '' ? '' : Number(inp.value)
-  }));
-  const payload = { fecha: _isoToDMY(f), terminales };
-  const pdfInp = $('concPdf');
-  if (pdfInp && pdfInp.files && pdfInp.files[0]) {
-    const fb = await _fileToBase64(pdfInp.files[0]);
-    payload.bankPdfBase64 = fb.base64; payload.bankPdfMime = fb.mime; payload.bankPdfName = fb.name;
-  }
-  btn.disabled = true; btn.textContent = 'Guardando…';
-  const r = await callAPI('guardarConciliacion', payload);
-  btn.disabled = false; btn.textContent = 'Guardar conciliación';
-  if (!r.ok) { msg.style.color = 'var(--error)'; msg.textContent = r.error || 'Error al guardar.'; return; }
-  CONC_DATA = r; renderConciliacion(r);
-  msg.style.color = 'var(--success)'; msg.textContent = '✓ Conciliación guardada.';
+  list.innerHTML=rows.map(r=>cardHTML(r,done.includes(r.id))).join('');
+}
+function cardHTML(r,isDone){
+  const showMsg=r.mensaje&&(r.estado==='En seguimiento'||r.estado==='Vencida');
+  const active=(r.estado==='En seguimiento'||r.estado==='Vencida');
+  const dir=state.rol==='director';
+  return `<div class="card" style="border-left-color:${r.estado==='Vencida'?'var(--red)':r.estado==='Cerrada'?'var(--green)':'var(--gold)'}">
+    <div class="top"><div><div class="nm">${r.paciente}</div><div class="proc">${r.procedimiento}</div>${dir&&r.asesora?`<div class="dir-ase">👤 ${r.asesora}</div>`:''}</div>${estadoBadge(r.estado)}</div>
+    <div class="meta">
+      <span class="chip">💰 <b>${money(r.monto)}</b></span><span class="chip">📅 <b>${r.dias}</b> días</span>
+      ${r.motivo?`<span class="chip">🎯 ${r.motivo}</span>`:''}${r.proximo&&!r.accionHoy?`<span class="chip">⏭ ${r.proximo}</span>`:''}
+    </div>
+    ${r.accionHoy?`<div class="accion">👉 ${r.accionHoy}</div>`:''}
+    ${showMsg?`<div class="msg" id="msg-${r.id}">${r.mensaje}</div>`:''}
+    ${active&&!dir?`
+    <div class="row-actions">
+      <button class="btn copy" onclick="copyMsg('${r.id}')">⧉ Copiar</button>
+      <a class="btn wa" href="${r.whatsapp}" target="_blank" rel="noopener">WhatsApp</a>
+      <button class="btn done ${isDone?'ok':''}" id="done-${r.id}" onclick="marcar('${r.id}')">${isDone?'✓ Hecho':'Contactado'}</button>
+    </div>
+    <div class="tools">
+      <select onchange="setMotivo('${r.id}',this.value)"><option value="">Motivo no-cierre…</option>${MOTIVOS.map(m=>`<option ${m===r.motivo?'selected':''}>${m}</option>`).join('')}</select>
+      ${r.pdf&&r.pdf!=='#'?`<a class="pdfbtn" href="${r.pdf}" target="_blank" rel="noopener">📄 PDF</a>`:''}
+    </div>
+    <textarea class="notes" placeholder="Notas rápidas…" onchange="setNotas('${r.id}',this.value)">${r.notas||''}</textarea>
+    `:`${r.notas?`<div class="msg" style="border-left-color:var(--muted)">📝 ${r.notas}</div>`:''}`}
+  </div>`;
+}
+
+// ============ ACCIONES ============
+function copyMsg(id){ const el=document.getElementById('msg-'+id); if(!el)return; navigator.clipboard.writeText(el.textContent).then(()=>toast('Mensaje copiado ✓')); }
+async function marcar(id){
+  const done=getDone(); const btn=document.getElementById('done-'+id);
+  if(!done.includes(id)){ done.push(id); setDone(done); btn.classList.add('ok'); btn.textContent='✓ Hecho'; toast('¡Contacto registrado! 💪');
+    await apiPost({action:'marcarContactado',id}); render(); }
+}
+async function setMotivo(id,motivo){ if(!motivo)return; const row=state.rows.find(r=>r.id===id); if(row)row.motivo=motivo; toast('Motivo guardado'); await apiPost({action:'setMotivo',id,motivo}); reload(); }
+async function setNotas(id,notas){ const row=state.rows.find(r=>r.id===id); if(row)row.notas=notas; await apiPost({action:'setNotas',id,notas}); toast('Nota guardada'); }
+
+function doneKey(){ return 'nvx_done_'+(state.email||state.asesora)+'_'+new Date().toISOString().slice(0,10); }
+function getDone(){ try{return JSON.parse(localStorage.getItem(doneKey())||'[]');}catch(e){return[];} }
+function setDone(a){ localStorage.setItem(doneKey(),JSON.stringify(a)); }
+
+let toastT; function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),1800); }
+
+function openConfig(){ document.getElementById('cfgUrl').value=API_URL; document.getElementById('cfgClient').value=GOOGLE_CLIENT_ID; document.getElementById('configModal').classList.remove('hidden'); }
+function closeConfig(){ document.getElementById('configModal').classList.add('hidden'); }
+function saveConfig(){
+  API_URL=document.getElementById('cfgUrl').value.trim();
+  GOOGLE_CLIENT_ID=document.getElementById('cfgClient').value.trim();
+  localStorage.setItem('nvx_api_url',API_URL); localStorage.setItem('nvx_client_id',GOOGLE_CLIENT_ID);
+  closeConfig(); toast('Configuración guardada'); setTimeout(()=>location.reload(),800);
+}
+
+// ============ DEMO DATA ============
+function demoRows(){
+  return [
+    {id:'COT-0099',asesora:'Claudia Falcón',paciente:'Elizabeth Aparicio',procedimiento:'Deep Plane Lifting Hybrid MS®',monto:165000,dias:0,estado:'En seguimiento',motivo:'',accionHoy:'Día 0 · Agradecer visita + enviar cotización',proximo:'Hoy',whatsapp:'https://wa.me/18058732148',pdf:'#',notas:'',mensaje:'Hola Elizabeth 🌷 Fue un gusto conocerte en Novalyx. Te dejo el resumen de tu Deep Plane Lifting y tu cotización ($165,000, vigente hasta el 18 jul 2026). Cualquier duda, escríbeme directo.'},
+    {id:'COT-0090',asesora:'Susana Palacios',paciente:'Alan Christopher González',procedimiento:'Rinoplastía Ultrasónica',monto:86500,dias:2,estado:'En seguimiento',motivo:'Precio',accionHoy:'Día 2 · Abrir conversación de pago',proximo:'Hoy',whatsapp:'https://wa.me/525512345678',pdf:'#',notas:'',mensaje:'Alan, ¿pudiste revisar la cotización de tu Rinoplastía? Muchas pacientes lo hacen a meses sin intereses o con plan de apartado. ¿Te comparto las opciones?'},
+    {id:'COT-0079',asesora:'Anahí Alvarado',paciente:'Lucía García Gutiérrez',procedimiento:'Lipo Full Body + Mamoplastía',monto:193500,dias:7,estado:'En seguimiento',motivo:'Miedo / dudas',accionHoy:'Día 7 · Enviar prueba social',proximo:'Hoy',whatsapp:'https://wa.me/525587654321',pdf:'#',notas:'Le preocupa la recuperación',mensaje:'Te comparto historias de pacientes que tenían las mismas dudas antes de su procedimiento. Ver su antes y después y cómo vivieron la recuperación tranquiliza muchísimo.'},
+    {id:'COT-0069',asesora:'Valeria Lima',paciente:'Vania Becerril González',procedimiento:'Abdominoplastía + RibXcar',monto:180000,dias:14,estado:'En seguimiento',motivo:'Decisión con terceros',accionHoy:'Día 14 · Check-in cálido',proximo:'Hoy',whatsapp:'https://wa.me/525511223344',pdf:'#',notas:'',mensaje:'Hola Vania 🌷 ¿cómo vas con la decisión sobre tu Abdominoplastía? Recuerda que tu precio sigue protegido. Sin prisa, aquí sigo.'},
+    {id:'COT-0058',asesora:'Claudia Falcón',paciente:'Mariana Lugo',procedimiento:'Implantes de Glúteos',monto:141500,dias:33,estado:'Vencida',motivo:'Tiempos',accionHoy:'',proximo:'Nurture mensual',whatsapp:'https://wa.me/525599887766',pdf:'#',notas:'Quería para diciembre',mensaje:''},
+    {id:'COT-0051',asesora:'Susana Palacios',paciente:'Regina Madrigal',procedimiento:'Mastopexia con Implantes',monto:127000,dias:21,estado:'Cerrada',motivo:'Precio',accionHoy:'',proximo:'',whatsapp:'https://wa.me/525500112233',pdf:'#',notas:'¡Cerró! Cirugía agendada',mensaje:''},
+  ].filter(r=> state.rol==='director' ? true : r.asesora===state.asesora);
 }
 </script>
-<div id="modalSplitCirugia" class="modal-overlay hidden">
-  <div class="modal-card">
-    <h3 class="serif">Cirugía requiere 2 cobros</h3>
-    <p class="muted small" style="margin:0 0 12px 0;">
-      Tratamiento: <b id="splitTrat">—</b>
-    </p>
-    <div class="split-row">
-      <span class="lbl-r" id="splitLblDr">Honorarios Dr.</span>
-      <span class="amt" id="splitHon">$0</span>
-      <select id="splitTermDr"></select>
-    </div>
-    <div class="split-row">
-      <span class="lbl-r" id="splitLblRen">Bucket Clínica</span>
-      <span class="amt" id="splitBck">$0</span>
-      <select id="splitTermRen"></select>
-    </div>
-    <div class="modal-actions">
-      <button class="btn btn-secondary" onclick="cancelarSplitCirugia()">Cancelar</button>
-      <button class="btn btn-primary" onclick="confirmarSplitCirugia()">Agregar ambos al carrito</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL CÁMARA WEB -->
-<div id="modalCamara" class="modal-overlay hidden">
-  <div class="modal-card" style="max-width:520px;">
-    <h3 class="serif" id="camTitulo">Tomar foto</h3>
-    <video id="camVideo" autoplay playsinline style="width:100%;border-radius:6px;background:#000;max-height:60vh;"></video>
-    <canvas id="camCanvas" class="hidden"></canvas>
-    <div class="muted small" id="camMsg" style="margin-top:6px;"></div>
-    <div class="modal-actions">
-      <button class="btn btn-secondary" onclick="cerrarCamara()">Cancelar</button>
-      <button class="btn btn-primary" id="camBtnCapturar" onclick="capturarFoto()">📷 Capturar</button>
-    </div>
-  </div>
-</div>
 </body>
 </html>
