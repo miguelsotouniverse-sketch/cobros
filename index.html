@@ -255,11 +255,14 @@
             <input type="text" id="buscaPac" autocomplete="off" placeholder="Escribe el nombre y elige de la lista…">
             <div id="resultados" class="resultados hidden"></div>
           </div>
+          <div class="muted small" id="pacLibreLink" style="margin-top:6px;">
+            ¿Paciente externo de la Dra. Damián? <span class="link" style="cursor:pointer;" onclick="usarPacienteLibre()">Usar el nombre escrito tal cual →</span>
+          </div>
           <div id="pacSel" class="pac-sel hidden">
             <div>
               <div id="pacNombre" class="pac-nombre"></div>
               <div id="pacMeta" class="muted small"></div>
-              <span class="link" style="font-size:0.8rem;cursor:pointer;" onclick="verHistorial()">Ver historial de pagos</span>
+              <span class="link" id="linkHistorial" style="font-size:0.8rem;cursor:pointer;" onclick="verHistorial()">Ver historial de pagos</span>
             </div>
             <button type="button" class="link" onclick="limpiarPaciente()">Cambiar</button>
           </div>
@@ -820,11 +823,25 @@ function elegirPaciente(p) {
   $('buscaPac').value = '';
   $('pacNombre').textContent = p.nombre;
   $('pacMeta').textContent = 'ID ' + p.id + (p.apodo ? ' · Le gusta: ' + p.apodo : '') + (p.estatus ? ' · ' + p.estatus : '') + (p.procedencia ? ' · ' + p.procedencia : '');
+  const lh = $('linkHistorial'); if (lh) lh.style.display = '';
+  hide('pacLibreLink');
   show('pacSel');
   hide('pacNoExiste');
   hide('histBox');
   // Si ya estaba seleccionada la línea Cirugía, recargar las cotizaciones del nuevo paciente
   if ($('linea').value === 'Cirugía') cargarCotizaciones();
+}
+// Paciente externo de la Dra. Damián: nombre capturado a mano (sin darlo de alta en la base)
+function usarPacienteLibre() {
+  const nombre = $('buscaPac').value.trim();
+  if (nombre.length < 3) { showMsg('Escribe el nombre del paciente en el buscador y luego usa esta opción.'); return; }
+  PAC = { id: '', nombre: nombre, estatus: 'Externo', procedencia: '', esLibre: true };
+  $('pacNombre').textContent = nombre;
+  $('pacMeta').textContent = 'Paciente externo (Dra. Damián) · nombre capturado a mano';
+  const lh = $('linkHistorial'); if (lh) lh.style.display = 'none';
+  hide('resultados'); hide('pacNoExiste'); hide('histBox'); hide('pacLibreLink');
+  $('buscaPac').value = '';
+  show('pacSel');
 }
 function limpiarPaciente() {
   PAC = null;
@@ -832,6 +849,7 @@ function limpiarPaciente() {
   COTIZACIONES_PAC = [];
   hide('pacSel');
   hide('histBox');
+  show('pacLibreLink');
   $('buscaPac').value = '';
   if ($('linea').value === 'Cirugía') cargarCotizaciones();
   $('buscaPac').focus();
@@ -1115,7 +1133,7 @@ function nuevoCobro() {
   show('grupoTerminal'); show('grupoTerminalTrat');
   $('pagoDistinto').checked = false;
   limpiarErrores();
-  hide('pacSel'); hide('boxTC'); hide('previewMXN'); hide('msg'); hide('boxNumFactura'); hide('boxPagoTrat'); hide('histBox'); hide('boxAutoriza');
+  hide('pacSel'); hide('boxTC'); hide('previewMXN'); hide('msg'); hide('boxNumFactura'); hide('boxPagoTrat'); hide('histBox'); hide('boxAutoriza'); show('pacLibreLink');
   hide('cotizacionBox'); hide('cotizacionSaldo'); hide('cotizacionAcciones');
   show('grupoTratamiento');
   $('liquidarSplit').checked = false;
