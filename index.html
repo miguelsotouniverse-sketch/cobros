@@ -336,20 +336,24 @@
         <div id="carritoLista"></div>
         <div id="carritoTotal" class="hidden" style="text-align:right;font-weight:600;font-size:1.05rem;margin:10px 0;"></div>
 
-        <div class="section-label serif">Datos generales</div>
-        <div class="grid2">
-          <div class="form-group"><label class="lbl">Médico titular</label><select id="medico"></select></div>
-          <div class="form-group"><label class="lbl">Operativo / quién atendió</label><select id="operativo"></select></div>
-        </div>
-        <div class="grid2">
-          <div class="form-group"><label class="lbl">Prospecta</label><select id="prospecta"></select></div>
-          <div class="form-group"><label class="lbl">Cierra</label><select id="cierra"></select></div>
+        <div id="seccionDatosGenerales">
+          <div class="section-label serif">Datos generales</div>
+          <div class="grid2">
+            <div class="form-group"><label class="lbl">Médico titular</label><select id="medico"></select></div>
+            <div class="form-group"><label class="lbl">Operativo / quién atendió</label><select id="operativo"></select></div>
+          </div>
+          <div class="grid2">
+            <div class="form-group"><label class="lbl">Prospecta</label><select id="prospecta"></select></div>
+            <div class="form-group"><label class="lbl">Cierra</label><select id="cierra"></select></div>
+          </div>
         </div>
 
-        <div class="section-label serif">Facturación</div>
-        <div class="grid2">
-          <div class="form-group"><label class="lbl">¿Factura?</label><select id="factura"><option>No</option><option>Sí</option></select></div>
-          <div class="form-group hidden" id="boxNumFactura"><label class="lbl">No. de factura</label><input type="text" id="numFactura" placeholder="Folio fiscal / número"></div>
+        <div id="seccionFacturacion">
+          <div class="section-label serif">Facturación</div>
+          <div class="grid2">
+            <div class="form-group"><label class="lbl">¿Factura?</label><select id="factura"><option>No</option><option>Sí</option></select></div>
+            <div class="form-group hidden" id="boxNumFactura"><label class="lbl">No. de factura</label><input type="text" id="numFactura" placeholder="Folio fiscal / número"></div>
+          </div>
         </div>
 
         <div class="form-group"><label class="lbl">Observaciones</label><input type="text" id="obs" placeholder="Notas del cobro"></div>
@@ -713,12 +717,14 @@ function initApp() {
       hide('cotizacionAcciones');
       $('cotizacionInfo').textContent = '';
     }
-    // Dra. Damián: no usa lista de precios → ocultar Precio de lista y Descuentos (solo Monto abierto)
+    // Dra. Damián: no usa lista de precios ni datos generales/facturación → forma simplificada
     if (_esLineaDamian(this.value)) {
       hide('grupoPrecioLista'); hide('grupoDescuentos'); hide('boxAutoriza');
+      hide('seccionDatosGenerales'); hide('seccionFacturacion');
       $('descuento').value = ''; $('descuentoMonto').value = '';
     } else {
       show('grupoPrecioLista'); show('grupoDescuentos');
+      show('seccionDatosGenerales'); show('seccionFacturacion');
     }
   });
   $('cotizacionSel').addEventListener('change', onElegirCotizacion);
@@ -917,10 +923,12 @@ async function enviarCobro() {
   if (ENVIANDO) return;
   hideMsg();
   limpiarErrores();
-  const medico = $('medico').value;
+  // Cobro 100% Dra. Damián: no se piden datos generales ni facturación
+  const soloDamian = CARRITO.length && CARRITO.every(t => _esLineaDamian(t.linea));
+  const medico = soloDamian ? 'Dra. Carmen Damián' : $('medico').value;
   const faltan = [];
   if (!PAC) faltan.push('paciente');
-  if (!medico) { marcarError('medico'); faltan.push('médico titular'); }
+  if (!soloDamian && !$('medico').value) { marcarError('medico'); faltan.push('médico titular'); }
   if (!CARRITO.length) faltan.push('al menos un tratamiento en la lista');
   if (faltan.length) {
     if (!PAC) marcarError('buscaPac');
@@ -931,10 +939,10 @@ async function enviarCobro() {
   const comun = {
     idPaciente: PAC.id, nombrePaciente: PAC.nombre,
     estatusPaciente: PAC.estatus || '', procedencia: PAC.procedencia || '',
-    medico, operativo: $('operativo').value,
-    prospecta: $('prospecta').value, cierra: $('cierra').value,
-    factura: $('factura').value,
-    numFactura: $('factura').value === 'Sí' ? $('numFactura').value.trim() : '',
+    medico, operativo: soloDamian ? 'Dra. Carmen Damián' : $('operativo').value,
+    prospecta: soloDamian ? '' : $('prospecta').value, cierra: soloDamian ? '' : $('cierra').value,
+    factura: soloDamian ? 'No' : $('factura').value,
+    numFactura: (!soloDamian && $('factura').value === 'Sí') ? $('numFactura').value.trim() : '',
     observaciones: $('obs').value.trim()
   };
 
@@ -1143,6 +1151,7 @@ function nuevoCobro() {
   hide('pacSel'); hide('boxTC'); hide('previewMXN'); hide('msg'); hide('boxNumFactura'); hide('boxPagoTrat'); hide('histBox'); hide('boxAutoriza'); show('pacLibreLink');
   hide('cotizacionBox'); hide('cotizacionSaldo'); hide('cotizacionAcciones');
   show('grupoTratamiento'); show('grupoPrecioLista'); show('grupoDescuentos');
+  show('seccionDatosGenerales'); show('seccionFacturacion');
   $('liquidarSplit').checked = false;
   $('cotizacionInfo').textContent = ''; $('cotizacionSel').innerHTML = '';
   hide('repartoCard'); hide('comprobantesCard');
