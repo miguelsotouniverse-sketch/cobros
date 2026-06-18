@@ -307,10 +307,10 @@
           </div>
         </div>
         <div class="grid2">
-          <div class="form-group"><label class="lbl">Precio de lista</label><input type="number" id="precioLista" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></div>
+          <div class="form-group" id="grupoPrecioLista"><label class="lbl">Precio de lista</label><input type="number" id="precioLista" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></div>
           <div class="form-group"><label class="lbl" id="lblMonto">Monto a cobrar</label><input type="number" id="monto" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></div>
         </div>
-        <div class="grid2">
+        <div class="grid2" id="grupoDescuentos">
           <div class="form-group"><label class="lbl">Descuento %</label><input type="number" id="descuento" min="0" max="100" step="1" inputmode="decimal" placeholder="0"></div>
           <div class="form-group"><label class="lbl">Descuento $ (monto fijo)</label><input type="number" id="descuentoMonto" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></div>
         </div>
@@ -712,6 +712,13 @@ function initApp() {
       hide('cotizacionSaldo');
       hide('cotizacionAcciones');
       $('cotizacionInfo').textContent = '';
+    }
+    // Dra. Damián: no usa lista de precios → ocultar Precio de lista y Descuentos (solo Monto abierto)
+    if (_esLineaDamian(this.value)) {
+      hide('grupoPrecioLista'); hide('grupoDescuentos'); hide('boxAutoriza');
+      $('descuento').value = ''; $('descuentoMonto').value = '';
+    } else {
+      show('grupoPrecioLista'); show('grupoDescuentos');
     }
   });
   $('cotizacionSel').addEventListener('change', onElegirCotizacion);
@@ -1135,7 +1142,7 @@ function nuevoCobro() {
   limpiarErrores();
   hide('pacSel'); hide('boxTC'); hide('previewMXN'); hide('msg'); hide('boxNumFactura'); hide('boxPagoTrat'); hide('histBox'); hide('boxAutoriza'); show('pacLibreLink');
   hide('cotizacionBox'); hide('cotizacionSaldo'); hide('cotizacionAcciones');
-  show('grupoTratamiento');
+  show('grupoTratamiento'); show('grupoPrecioLista'); show('grupoDescuentos');
   $('liquidarSplit').checked = false;
   $('cotizacionInfo').textContent = ''; $('cotizacionSel').innerHTML = '';
   hide('repartoCard'); hide('comprobantesCard');
