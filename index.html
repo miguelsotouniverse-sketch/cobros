@@ -558,6 +558,29 @@ function aplicaEfectivoTerminalTrat() {
   if ($('metodoTrat').value === 'Efectivo') { $('terminalTrat').value = _esLineaDamian($('linea').value) ? 'Efectivo Renasté' : 'Efectivo Dr.'; hide('grupoTerminalTrat'); }
   else { show('grupoTerminalTrat'); }
 }
+// Médico titular y Operativo dependen de la línea de negocio.
+// titular = quién es el médico responsable; operativo = quién atiende/realiza.
+var MEDICOS_LINEA = {
+  'Inyectables':                   { titular: ['Dr. Miguel Soto', 'Dra. Laura Tagle', 'Dra. Samantha Contreras'], operativo: ['Dr. Miguel Soto', 'Dra. Laura Tagle', 'Dra. Samantha Contreras'] },
+  'Fibrosis Zero':                 { titular: ['Dr. Miguel Soto'], operativo: ['Dra. Laura Tagle', 'Dra. Samantha Contreras', 'LE Ruth Damian'] },
+  'Microneedling':                 { titular: ['Dr. Miguel Soto', 'Dra. Laura Tagle', 'Dra. Samantha Contreras'], operativo: ['Dra. Laura Tagle', 'Dra. Samantha Contreras'] },
+  'Medicamentos y Dermocosmética': { titular: ['Dr. Miguel Soto', 'Dra. Laura Tagle', 'Dra. Samantha Contreras'], operativo: ['Dr. Miguel Soto', 'Dra. Laura Tagle', 'Dra. Samantha Contreras'] },
+  'Consulta':                      { titular: ['Dr. Miguel Soto', 'Dra. Laura Tagle', 'Dra. Samantha Contreras'], operativo: ['Dr. Miguel Soto', 'Staff médico'] },
+  'Paquetes':                      { titular: ['Dr. Miguel Soto', 'Dra. Laura Tagle', 'Dra. Samantha Contreras'], operativo: ['Dr. Miguel Soto', 'Dra. Laura Tagle', 'Dra. Samantha Contreras', 'LE Ruth Damian'] }
+};
+// Rellena Médico titular y Operativo según la línea seleccionada.
+function aplicarMedicosPorLinea(linea) {
+  // Cirugía: siempre el Dr. Miguel Soto (titular y operativo), bloqueado.
+  if (linea === 'Cirugía') {
+    fill('medico', ['Dr. Miguel Soto']); $('medico').value = 'Dr. Miguel Soto'; $('medico').disabled = true;
+    fill('operativo', ['Dr. Miguel Soto']); $('operativo').value = 'Dr. Miguel Soto'; $('operativo').disabled = true;
+    return;
+  }
+  $('medico').disabled = false; $('operativo').disabled = false;
+  var cfg = (!_esLineaDamian(linea)) ? MEDICOS_LINEA[linea] : null;
+  if (cfg) { fill('medico', cfg.titular); fill('operativo', cfg.operativo); }
+  else { fill('medico', catalogos.medicos); fill('operativo', catalogos.medicos); }
+}
 
 function decodeJWT(token) {
   try {
@@ -706,19 +729,18 @@ function initApp() {
     if (this.value === 'Cirugía') {
       // Cirugía: se cobra contra una cotización aceptada, no por búsqueda de tratamiento
       hide('grupoTratamiento');
-      // En cirugía, médico titular y operativo son SIEMPRE el Dr. Miguel Soto (no cambia)
-      $('medico').value = 'Dr. Miguel Soto'; $('medico').disabled = true;
-      $('operativo').value = 'Dr. Miguel Soto'; $('operativo').disabled = true;
       cargarCotizaciones();
     } else {
       show('grupoTratamiento');
       DATOS_BLOQUEADOS = false;
-      ['medico', 'operativo', 'prospecta', 'cierra'].forEach(id => { $(id).disabled = false; });
+      ['prospecta', 'cierra'].forEach(id => { $(id).disabled = false; });
       hide('cotizacionBox');
       hide('cotizacionSaldo');
       hide('cotizacionAcciones');
       $('cotizacionInfo').textContent = '';
     }
+    // Médico titular y Operativo dependen de la línea de negocio
+    aplicarMedicosPorLinea(this.value);
     // Dra. Damián: no usa lista de precios ni datos generales/facturación → forma simplificada
     if (_esLineaDamian(this.value)) {
       hide('grupoPrecioLista'); hide('grupoDescuentos'); hide('boxAutoriza');
@@ -1485,6 +1507,7 @@ function limpiarTratamiento() {
   TRAT_ELEGIDO = null;
   COT_ELEGIDA = null;
   $('linea').selectedIndex = 0;
+  aplicarMedicosPorLinea('');
   $('condicion').selectedIndex = 0;
   $('condicion').disabled = false;
   $('pagoDistinto').checked = false;
