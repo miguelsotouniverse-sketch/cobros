@@ -315,7 +315,7 @@
           <div class="form-group"><label class="lbl">Descuento $ (monto fijo)</label><input type="number" id="descuentoMonto" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></div>
         </div>
         <div class="form-group hidden" id="boxAutoriza"><label class="lbl">¿Quién autoriza el descuento?</label><input type="text" id="autorizaDesc" placeholder="Nombre de quien autoriza"></div>
-        <div class="form-group"><label class="lbl">Condición de pago de este tratamiento</label><select id="condicion"></select></div>
+        <div class="form-group" id="grupoCondicion"><label class="lbl">Condición de pago de este tratamiento</label><select id="condicion"></select></div>
         <div id="previewMXN" class="preview-mxn hidden"></div>
 
         <div class="form-group">
@@ -738,6 +738,7 @@ function initApp() {
     TRAT_ELEGIDO = null;
     COT_ELEGIDA = null;
     hide('tratResultados');
+    show('grupoCondicion');   // sin tratamiento aún; elegirTrat lo ocultará si es anticipo
     if (this.value === 'Cirugía') {
       // Cirugía: se cobra contra una cotización aceptada, no por búsqueda de tratamiento
       hide('grupoTratamiento');
@@ -1248,6 +1249,16 @@ function onBuscarTrat() {
   show('tratResultados');
 }
 
+// Un anticipo (de cirugía plástica o de medicina estética) siempre es condición "Anticipo".
+function _esAnticipo(nombre) { return /anticipo/i.test(String(nombre || '')); }
+function _aplicarCondicionAnticipo() {
+  if (_esAnticipo($('tratamiento').value)) {
+    $('condicion').value = 'Anticipo';
+    hide('grupoCondicion');
+  } else {
+    show('grupoCondicion');
+  }
+}
 function elegirTrat(i) {
   const matches = $('tratResultados')._matches || [];
   const p = matches[i];
@@ -1259,6 +1270,7 @@ function elegirTrat(i) {
   }
   $('tratamiento').value = p.nombre;
   hide('tratResultados');
+  _aplicarCondicionAnticipo();   // si es anticipo, fija condición = Anticipo y oculta el desplegable
   // Dra. Carmen Damián: ella NO usa la lista de precios → el concepto solo rellena el nombre,
   // el precio/monto quedan ABIERTOS para capturarlos a mano.
   if (_esLineaDamian(p.linea)) {
@@ -1524,6 +1536,7 @@ function limpiarTratamiento() {
   aplicarMedicosPorLinea(_lineaMedicosEfectiva());
   $('condicion').selectedIndex = 0;
   $('condicion').disabled = false;
+  show('grupoCondicion');   // por defecto visible; elegirTrat lo oculta si es anticipo
   $('pagoDistinto').checked = false;
   hide('boxPagoTrat');
   hide('boxAutoriza');
