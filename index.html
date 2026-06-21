@@ -565,10 +565,22 @@ var MEDICOS_LINEA = {
   'Fibrosis Zero':                 { titular: ['Dr. Miguel Soto'], operativo: ['Dra. Laura Tagle', 'Dra. Samantha Contreras', 'LE Ruth Damian'] },
   'Microneedling':                 { titular: ['Dr. Miguel Soto', 'Dra. Laura Tagle', 'Dra. Samantha Contreras'], operativo: ['Dra. Laura Tagle', 'Dra. Samantha Contreras'] },
   'Medicamentos y Dermocosmética': { titular: ['Dr. Miguel Soto', 'Dra. Laura Tagle', 'Dra. Samantha Contreras'], operativo: ['Dr. Miguel Soto', 'Dra. Laura Tagle', 'Dra. Samantha Contreras'] },
-  'Consulta':                      { titular: ['Dr. Miguel Soto', 'Dra. Laura Tagle', 'Dra. Samantha Contreras'], operativo: ['Dr. Miguel Soto', 'Dra. Laura Tagle', 'Dra. Samantha Contreras', 'Staff médico'] },
+  'Consulta':                      { titular: ['Dr. Miguel Soto', 'Dra. Laura Tagle', 'Dra. Samantha Contreras', 'Staff médico'], operativo: ['Dr. Miguel Soto', 'Dra. Laura Tagle', 'Dra. Samantha Contreras', 'Staff médico'] },
   'Paquetes':                      { titular: ['Dr. Miguel Soto', 'Dra. Laura Tagle', 'Dra. Samantha Contreras'], operativo: ['Dr. Miguel Soto', 'Dra. Laura Tagle', 'Dra. Samantha Contreras', 'LE Ruth Damian'] }
 };
-// Rellena Médico titular y Operativo según la línea seleccionada.
+// Re-llena un select preservando la opción ya elegida si sigue en la nueva lista.
+function _fillPreservando(id, arr) {
+  var prev = $(id).value;
+  fill(id, arr);
+  if (prev && arr.indexOf(prev) >= 0) $(id).value = prev;
+}
+// La línea que manda para Médico/Operativo (datos del cobro completo): la del carrito si ya hay
+// tratamientos, o la del selector. Evita que se reinicien al "Agregar a la lista" (que limpia el selector).
+function _lineaMedicosEfectiva() {
+  if (typeof CARRITO !== 'undefined' && CARRITO && CARRITO.length) return CARRITO[0].linea || '';
+  return $('linea').value || '';
+}
+// Rellena Médico titular y Operativo según la línea de negocio.
 function aplicarMedicosPorLinea(linea) {
   // Cirugía: siempre el Dr. Miguel Soto (titular y operativo), bloqueado.
   if (linea === 'Cirugía') {
@@ -578,8 +590,8 @@ function aplicarMedicosPorLinea(linea) {
   }
   $('medico').disabled = false; $('operativo').disabled = false;
   var cfg = (!_esLineaDamian(linea)) ? MEDICOS_LINEA[linea] : null;
-  if (cfg) { fill('medico', cfg.titular); fill('operativo', cfg.operativo); }
-  else { fill('medico', catalogos.medicos); fill('operativo', catalogos.medicos); }
+  _fillPreservando('medico', cfg ? cfg.titular : catalogos.medicos);
+  _fillPreservando('operativo', cfg ? cfg.operativo : catalogos.medicos);
 }
 
 function decodeJWT(token) {
@@ -1168,6 +1180,7 @@ function nuevoCobro() {
   $('descuentoMonto').disabled = false;
   $('pagoDistinto').disabled = false;
   ['linea', 'metodo', 'terminal', 'moneda', 'metodoTrat', 'terminalTrat', 'monedaTrat', 'medico', 'operativo', 'prospecta', 'cierra', 'condicion', 'factura'].forEach(id => { if ($(id)) $(id).selectedIndex = 0; });
+  aplicarMedicosPorLinea('');   // carrito ya vacío → listas por defecto
   ['medico', 'operativo', 'prospecta', 'cierra'].forEach(id => { $(id).disabled = false; });
   $('condicion').disabled = false;
   DATOS_BLOQUEADOS = false;
@@ -1507,7 +1520,8 @@ function limpiarTratamiento() {
   TRAT_ELEGIDO = null;
   COT_ELEGIDA = null;
   $('linea').selectedIndex = 0;
-  aplicarMedicosPorLinea('');
+  // Médico/Operativo se mantienen según la línea del carrito (no se reinician al agregar)
+  aplicarMedicosPorLinea(_lineaMedicosEfectiva());
   $('condicion').selectedIndex = 0;
   $('condicion').disabled = false;
   $('pagoDistinto').checked = false;
