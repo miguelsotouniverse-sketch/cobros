@@ -301,9 +301,9 @@
           <div id="cotizacionAcciones" class="hidden" style="margin-top:8px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
             <label style="margin:0;font-size:0.85rem;cursor:pointer;">
               <input type="checkbox" id="liquidarSplit" style="width:auto;margin-right:6px;vertical-align:middle;">
-              Liquidar el saldo con split (honorarios→Dr / bucket→Renasté)
+              <span id="liquidarTxt">Liquidar el saldo con split (honorarios→Dr / bucket→Renasté)</span>
             </label>
-            <button type="button" class="link" onclick="abrirEstadoCuenta()">Ver estado de cuenta</button>
+            <button type="button" id="btnEstadoCuenta" class="link" onclick="abrirEstadoCuenta()">Ver estado de cuenta</button>
           </div>
         </div>
         <div class="grid2">
@@ -538,6 +538,8 @@ let CARRITO = [];
 let TRAT_ELEGIDO = null; // tratamiento seleccionado de la lista (estricto)
 let COT_ELEGIDA = null; // cotización aceptada elegida (cirugía)
 let COTIZACIONES_PAC = []; // cotizaciones aceptadas del paciente actual
+let PAQUETES_PAC = [];     // paquetes cotizados del paciente actual
+let MODO_COT = 'cirugia';  // 'cirugia' | 'paquetes': qué llena el selector cotizacionSel
 let ESTADO_ACTUAL = null; // último estado de cuenta cargado (para compartir)
 let DATOS_BLOQUEADOS = false; // datos generales bloqueados (abono de una cotización con pagos previos)
 let BUSCANDO = null;
@@ -741,9 +743,18 @@ function initApp() {
     show('grupoCondicion');   // sin tratamiento aún; elegirTrat lo ocultará si es anticipo
     if (this.value === 'Cirugía') {
       // Cirugía: se cobra contra una cotización aceptada, no por búsqueda de tratamiento
+      MODO_COT = 'cirugia';
       hide('grupoTratamiento');
       cargarCotizaciones();
+    } else if (this.value === 'Paquetes') {
+      // Paquetes: se cobra contra un paquete cotizado/aceptado (abono o liquidación)
+      MODO_COT = 'paquetes';
+      hide('grupoTratamiento');
+      DATOS_BLOQUEADOS = false;
+      ['prospecta', 'cierra'].forEach(id => { $(id).disabled = false; });
+      cargarPaquetes();
     } else {
+      MODO_COT = 'cirugia';
       show('grupoTratamiento');
       DATOS_BLOQUEADOS = false;
       ['prospecta', 'cierra'].forEach(id => { $(id).disabled = false; });
@@ -880,8 +891,9 @@ function elegirPaciente(p) {
   show('pacSel');
   hide('pacNoExiste');
   hide('histBox');
-  // Si ya estaba seleccionada la línea Cirugía, recargar las cotizaciones del nuevo paciente
+  // Si ya estaba seleccionada la línea Cirugía/Paquetes, recargar para el nuevo paciente
   if ($('linea').value === 'Cirugía') cargarCotizaciones();
+  else if ($('linea').value === 'Paquetes') cargarPaquetes();
 }
 // Paciente externo de la Dra. Damián: nombre capturado a mano (sin darlo de alta en la base)
 function usarPacienteLibre() {
@@ -899,11 +911,13 @@ function limpiarPaciente() {
   PAC = null;
   COT_ELEGIDA = null;
   COTIZACIONES_PAC = [];
+  PAQUETES_PAC = [];
   hide('pacSel');
   hide('histBox');
   show('pacLibreLink');
   $('buscaPac').value = '';
   if ($('linea').value === 'Cirugía') cargarCotizaciones();
+  else if ($('linea').value === 'Paquetes') cargarPaquetes();
   $('buscaPac').focus();
 }
 
@@ -1173,6 +1187,8 @@ function nuevoCobro() {
   TRAT_ELEGIDO = null;
   COT_ELEGIDA = null;
   COTIZACIONES_PAC = [];
+  PAQUETES_PAC = [];
+  MODO_COT = 'cirugia';
   renderCarrito();
   ['tratamiento', 'monto', 'tc', 'obs', 'buscaPac', 'numFactura', 'precioLista', 'descuento', 'descuentoMonto', 'autorizaDesc'].forEach(id => $(id).value = '');
   $('tratamiento').readOnly = false;
@@ -1447,7 +1463,7 @@ function agregarTratamiento() {
     monto: esCortesia ? 0 : monto,
     metodo: metodo, terminal: terminal, moneda: moneda,
     tipoCambio: tc,
-    cotizacionId: (linea === 'Cirugía' && COT_ELEGIDA) ? COT_ELEGIDA.cotizacionId : ''
+    cotizacionId: ((linea === 'Cirugía' || linea === 'Paquetes') && COT_ELEGIDA) ? COT_ELEGIDA.cotizacionId : ''
   });
   renderCarrito();
   limpiarTratamiento();
@@ -1531,6 +1547,7 @@ function limpiarTratamiento() {
   $('pagoDistinto').disabled = false;
   TRAT_ELEGIDO = null;
   COT_ELEGIDA = null;
+  MODO_COT = 'cirugia';
   $('linea').selectedIndex = 0;
   // Médico/Operativo se mantienen según la línea del carrito (no se reinician al agregar)
   aplicarMedicosPorLinea(_lineaMedicosEfectiva());
@@ -1674,12 +1691,16 @@ function limpiarErrores() {
 /* === COTIZACIONES (Cirugía exige cotización aceptada) === */
 
 async function cargarCotizaciones() {
+  MODO_COT = 'cirugia';
   COT_ELEGIDA = null;
   COTIZACIONES_PAC = [];
   const box = $('cotizacionBox');
   const sel = $('cotizacionSel');
   const info = $('cotizacionInfo');
   box.classList.remove('hidden');
+  const _lblC = box.querySelector('label'); if (_lblC) _lblC.textContent = 'Cotización aceptada (obligatoria para cirugía)';
+  if ($('liquidarTxt')) $('liquidarTxt').textContent = 'Liquidar el saldo con split (honorarios→Dr / bucket→Renasté)';
+  show('btnEstadoCuenta');
   if (!PAC) {
     sel.innerHTML = '<option value="">— selecciona primero al paciente —</option>';
     info.textContent = '';
@@ -1703,6 +1724,7 @@ async function cargarCotizaciones() {
 }
 
 function onElegirCotizacion() {
+  if (MODO_COT === 'paquetes') return onElegirPaquete();
   const id = $('cotizacionSel').value;
   const info = $('cotizacionInfo');
   const c = COTIZACIONES_PAC.find(x => x.cotizacionId === id);
@@ -1754,6 +1776,88 @@ function onElegirCotizacion() {
   $('monto').value = '';
   $('monto').placeholder = 'Monto del abono (saldo: ' + money(saldo) + ')';
   TRAT_ELEGIDO = { nombre: label, costo: c.granTotal, linea: 'Cirugía' };
+}
+
+/* === PAQUETES (línea "Paquetes" exige un paquete cotizado/aceptado) === */
+
+async function cargarPaquetes() {
+  MODO_COT = 'paquetes';
+  COT_ELEGIDA = null;
+  PAQUETES_PAC = [];
+  const box = $('cotizacionBox');
+  const sel = $('cotizacionSel');
+  const info = $('cotizacionInfo');
+  box.classList.remove('hidden');
+  const _lblP = box.querySelector('label'); if (_lblP) _lblP.textContent = 'Paquete cotizado a cobrar (obligatorio para paquetes)';
+  hide('cotizacionSaldo'); hide('cotizacionAcciones');
+  if (!PAC) {
+    sel.innerHTML = '<option value="">— selecciona primero al paciente —</option>';
+    info.textContent = '';
+    return;
+  }
+  sel.innerHTML = '<option value="">Cargando paquetes…</option>';
+  info.textContent = '';
+  const r = await callAPI('paquetesPaciente', { idPaciente: PAC.id });
+  if (!r.ok || !r.data || !r.data.length) {
+    sel.innerHTML = '<option value="">— sin paquetes —</option>';
+    info.innerHTML = '<span style="color:var(--error)">Este paciente no tiene paquetes cotizados. Genera y acepta la cotización del paquete en el cotizador.</span>';
+    return;
+  }
+  PAQUETES_PAC = r.data;
+  const money = n => '$' + Number(n).toLocaleString('es-MX', { minimumFractionDigits: 2 });
+  sel.innerHTML = '<option value="">— elegir paquete —</option>' + r.data.map(c => {
+    const saldo = (c.saldo != null) ? c.saldo : c.granTotal;
+    return '<option value="' + escapeHtml(String(c.paqueteId || c.cotizacionId)) + '">' +
+      escapeHtml(c.tratamiento || ('Paquete ' + c.cotizacionId)) + ' · ' + money(c.granTotal) +
+      ' · saldo ' + money(saldo) + (c.pagado ? ' · PAGADO' : '') +
+    '</option>';
+  }).join('');
+}
+
+function onElegirPaquete() {
+  const id = $('cotizacionSel').value;
+  const info = $('cotizacionInfo');
+  const c = PAQUETES_PAC.find(x => String(x.paqueteId) === id || String(x.cotizacionId) === id);
+  if (!c) {
+    COT_ELEGIDA = null; TRAT_ELEGIDO = null;
+    info.textContent = '';
+    hide('cotizacionSaldo'); hide('cotizacionAcciones');
+    $('tratamiento').value = ''; $('tratamiento').readOnly = false;
+    $('precioLista').value = ''; $('monto').value = '';
+    return;
+  }
+  const money = n => '$' + Number(n).toLocaleString('es-MX', { minimumFractionDigits: 2 });
+  const saldo = (c.saldo != null) ? c.saldo : c.granTotal;
+  // COT_ELEGIDA reutiliza la misma estructura que cirugía, pero marcado como paquete (sin split)
+  COT_ELEGIDA = {
+    cotizacionId: c.cotizacionId || '',
+    paqueteId: c.paqueteId || '',
+    granTotal: c.granTotal || 0,
+    saldoPendiente: saldo,
+    abonado: c.abonado || 0,
+    esPaquete: true
+  };
+  info.innerHTML = 'Paquete: <b>' + escapeHtml(c.tratamiento || '') + '</b>' +
+    ((c.totalSesiones) ? ' · Sesiones: <b>' + (c.sesionesConsumidas || 0) + '/' + c.totalSesiones + '</b>' : '');
+  const sBox = $('cotizacionSaldo');
+  sBox.innerHTML = 'Abonado: <b>' + money(c.abonado || 0) + '</b> &nbsp;·&nbsp; Saldo pendiente: <b style="color:var(--accent-dark)">' + money(saldo) + '</b>' +
+    (c.pagado ? ' &nbsp;·&nbsp; <b style="color:var(--success)">PAGADO</b>' : '') +
+    '<div class="muted small" style="margin-top:4px;">Captura abajo el <b>monto del abono</b>, o marca "Liquidar el saldo" para cobrar todo lo pendiente.</div>';
+  sBox.classList.remove('hidden');
+  // Acciones: solo la casilla de liquidar (sin split de cirugía, sin estado de cuenta)
+  show('cotizacionAcciones');
+  if ($('liquidarTxt')) $('liquidarTxt').textContent = 'Liquidar el saldo (cobrar todo lo pendiente)';
+  hide('btnEstadoCuenta');
+  $('liquidarSplit').checked = false;
+  $('condicion').value = 'Anticipo';
+  $('condicion').disabled = false;
+  const label = c.tratamiento || ('Paquete ' + c.cotizacionId);
+  $('tratamiento').value = label;
+  $('tratamiento').readOnly = true;
+  $('precioLista').value = c.granTotal || '';
+  $('monto').value = '';
+  $('monto').placeholder = 'Monto del abono (saldo: ' + money(saldo) + ')';
+  TRAT_ELEGIDO = { nombre: label, costo: c.granTotal || 0, linea: 'Paquetes' };
 }
 
 /* === ESTADO DE CUENTA (imprimible/compartible) === */
