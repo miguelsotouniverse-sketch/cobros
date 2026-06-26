@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
   <style>
     :root {
       --bg: #f1ebe1;
@@ -2428,6 +2429,7 @@ async function registrarCorte() {
 // REPORTES
 // ============================================================
 let REP_MODO = 'dia';
+let REP_RENASTE_DATA = null;   // último reporte Renasté generado (para exportar a Excel)
 function repTab(modo) {
   REP_MODO = modo;
   document.querySelectorAll('.rep-tab').forEach(b => {
@@ -2464,6 +2466,7 @@ async function generarReporte() {
     r = await callAPI('reporteRenaste', { desde: _isoToDMY(d), hasta: _isoToDMY(h) });
     if (!r.ok) { msg.style.color = 'var(--error)'; msg.textContent = r.error || 'Error al generar.'; return; }
     msg.textContent = '';
+    REP_RENASTE_DATA = r;
     $('repResultadoCard').style.display = 'block';
     $('repResultado').innerHTML = renderReporteRenasteHTML(r);
     window.scrollTo(0, document.getElementById('repResultadoCard').offsetTop - 20);
@@ -2491,8 +2494,80 @@ function _tablaSimple(titulo, arr) {
     '<table class="rep-tbl"><tbody>' + body + '</tbody></table></div>';
 }
 
+function descargarExcelRenaste() {
+  const r = REP_RENASTE_DATA;
+  if (!r) { showMsg('Genera primero el reporte de Renasté.'); return; }
+  if (typeof XLSX === 'undefined') { showMsg('La librería de Excel aún se está cargando; intenta de nuevo en unos segundos.'); return; }
+
+  // ── Estilos (paleta de la marca) ──
+  const BORDER = { top:{style:'thin',color:{rgb:'D8CFBF'}}, bottom:{style:'thin',color:{rgb:'D8CFBF'}}, left:{style:'thin',color:{rgb:'D8CFBF'}}, right:{style:'thin',color:{rgb:'D8CFBF'}} };
+  const sTitle    = { font:{bold:true,sz:16,color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:'1A1A1A'}}, alignment:{horizontal:'left',vertical:'center'} };
+  const sSub      = { font:{italic:true,sz:10,color:{rgb:'8A8378'}} };
+  const sTotalLbl = { font:{bold:true,sz:12,color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:'8E7456'}}, alignment:{horizontal:'left',vertical:'center'} };
+  const sTotalVal = { font:{bold:true,sz:13,color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:'8E7456'}}, alignment:{horizontal:'right',vertical:'center'}, numFmt:'"$"#,##0.00' };
+  const sSection  = { font:{bold:true,sz:11,color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:'B09372'}}, alignment:{horizontal:'left',vertical:'center'} };
+  const sHead     = { font:{bold:true,sz:10,color:{rgb:'1A1A1A'}}, fill:{fgColor:{rgb:'EBE4D6'}}, alignment:{horizontal:'left'}, border:BORDER };
+  const sHeadR    = { font:{bold:true,sz:10,color:{rgb:'1A1A1A'}}, fill:{fgColor:{rgb:'EBE4D6'}}, alignment:{horizontal:'right'}, border:BORDER };
+  const sTxt      = { font:{sz:10,color:{rgb:'1A1A1A'}}, alignment:{vertical:'top',wrapText:false}, border:BORDER };
+  const sMon      = { font:{sz:10,color:{rgb:'1A1A1A'}}, alignment:{horizontal:'right'}, numFmt:'"$"#,##0.00', border:BORDER };
+  const T = v => ({ v: String(v == null ? '' : v), t:'s', s:sTxt });
+  const M = v => ({ v: Number(v) || 0, t:'n', s:sMon });
+
+  const rows = [];
+  const merges = [];
+  const band = (text, style) => { merges.push({ s:{r:rows.length,c:0}, e:{r:rows.length,c:3} }); rows.push([{ v:text, t:'s', s:style }, null, null, null]); };
+
+  band('DR. MIGUEL SOTO · RENASTÉ', sTitle);
+  band('Reporte de valor real de Renasté (bruto, con IVA) — lo que le corresponde, no lo recaudado', sSub);
+  band('Periodo: ' + (r.desde || '') + '  —  ' + (r.hasta || ''), sSub);
+  merges.push({ s:{r:rows.length,c:0}, e:{r:rows.length,c:2} });
+  rows.push([{ v:'TOTAL RENASTÉ', t:'s', s:sTotalLbl }, null, null, { v:Number(r.totalBruto)||0, t:'n', s:sTotalVal }]);
+  rows.push([]);
+
+  // Por concepto
+  band('POR CONCEPTO', sSection);
+  rows.push([{ v:'Concepto', t:'s', s:sHead }, null, null, { v:'Monto', t:'s', s:sHeadR }]);
+  (r.porLinea || []).forEach(x => { merges.push({ s:{r:rows.length,c:0}, e:{r:rows.length,c:2} }); rows.push([T(x.nombre), null, null, M(x.monto)]); });
+  rows.push([]);
+
+  // Líneas Renasté
+  if (r.lineas && r.lineas.length) {
+    band('LÍNEAS RENASTÉ (COBRO DIRECTO)', sSection);
+    rows.push([{ v:'Fecha', t:'s', s:sHead }, { v:'Paciente', t:'s', s:sHead }, { v:'Concepto', t:'s', s:sHead }, { v:'Monto', t:'s', s:sHeadR }]);
+    r.lineas.forEach(m => rows.push([T(m.fecha), T(m.paciente), T((m.linea||'') + (m.tratamiento ? ' · ' + m.tratamiento : '')), M(m.montoBruto)]));
+    rows.push([]);
+  }
+  // Cirugías
+  if (r.cirugias && r.cirugias.length) {
+    band('CIRUGÍAS (COSTO REAL RENASTÉ · FOLIOS CERRADOS)', sSection);
+    rows.push([{ v:'Cierre', t:'s', s:sHead }, { v:'Paciente', t:'s', s:sHead }, { v:'Procedimiento', t:'s', s:sHead }, { v:'Costo Renasté', t:'s', s:sHeadR }]);
+    r.cirugias.forEach(m => rows.push([T(m.fecha), T(m.paciente), T(m.procedimiento), M(m.montoBruto)]));
+  }
+
+  // Construir worksheet desde celdas con estilo
+  const ws = {};
+  for (let R = 0; R < rows.length; R++) {
+    const row = rows[R] || [];
+    for (let C = 0; C < row.length; C++) {
+      const cell = row[C];
+      if (cell == null) continue;
+      ws[XLSX.utils.encode_cell({ r:R, c:C })] = cell;
+    }
+  }
+  ws['!ref'] = XLSX.utils.encode_range({ s:{r:0,c:0}, e:{r:Math.max(0,rows.length-1), c:3} });
+  ws['!cols'] = [{ wch:16 }, { wch:30 }, { wch:46 }, { wch:16 }];
+  ws['!rows'] = [{ hpt:24 }];
+  ws['!merges'] = merges;
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Renasté');
+  const limpio = s => String(s || '').replace(/\//g, '-');
+  XLSX.writeFile(wb, 'Renaste_' + limpio(r.desde) + '_a_' + limpio(r.hasta) + '.xlsx');
+}
+
 function renderReporteRenasteHTML(r) {
   let h = '<div class="rep-doc">';
+  h += '<button class="btn btn-secondary noprint" style="width:auto;margin:0 0 12px;" onclick="descargarExcelRenaste()">⬇ Descargar Excel</button>';
   h += '<div class="rep-head"><div><div class="brand">RENASTÉ · VALOR REAL</div>' +
        '<div class="sub">Lo que le corresponde a Renasté (bruto, con IVA) · ' + escapeHtml(r.desde) + ' — ' + escapeHtml(r.hasta) + '</div></div>' +
        '<div style="text-align:right;"><div class="muted small">Total Renasté</div><div style="font-size:1.4rem;font-weight:700;">' + fmt$(r.totalBruto) + '</div></div></div>';
