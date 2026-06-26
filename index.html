@@ -423,6 +423,7 @@
           <button class="btn btn-secondary rep-tab" data-rep="dia" style="width:auto;margin-top:0;" onclick="repTab('dia')">Diario</button>
           <button class="btn btn-secondary rep-tab" data-rep="semana" style="width:auto;margin-top:0;" onclick="repTab('semana')">Semanal</button>
           <button class="btn btn-secondary rep-tab" data-rep="mes" style="width:auto;margin-top:0;" onclick="repTab('mes')">Mensual</button>
+          <button class="btn btn-secondary rep-tab" data-rep="renaste" style="width:auto;margin-top:0;" onclick="repTab('renaste')">Renasté (real)</button>
         </div>
         <div id="repCtrlDia" class="grid2">
           <div class="form-group"><label class="lbl">Fecha</label><input type="date" id="repFecha"></div>
@@ -2457,6 +2458,17 @@ function _isoToDMY(iso) { if (!iso) return ''; const p = iso.split('-'); return 
 async function generarReporte() {
   const msg = $('repMsg'); msg.style.color = ''; msg.textContent = 'Generando…';
   let r;
+  if (REP_MODO === 'renaste') {
+    const d = $('repDesde').value, h = $('repHasta').value;
+    if (!d || !h) { msg.textContent = 'Elige el rango de fechas.'; return; }
+    r = await callAPI('reporteRenaste', { desde: _isoToDMY(d), hasta: _isoToDMY(h) });
+    if (!r.ok) { msg.style.color = 'var(--error)'; msg.textContent = r.error || 'Error al generar.'; return; }
+    msg.textContent = '';
+    $('repResultadoCard').style.display = 'block';
+    $('repResultado').innerHTML = renderReporteRenasteHTML(r);
+    window.scrollTo(0, document.getElementById('repResultadoCard').offsetTop - 20);
+    return;
+  }
   if (REP_MODO === 'dia') {
     const f = $('repFecha').value; if (!f) { msg.textContent = 'Elige una fecha.'; return; }
     r = await callAPI('reporteDia', { fecha: _isoToDMY(f) });
@@ -2477,6 +2489,32 @@ function _tablaSimple(titulo, arr) {
   let body = arr.map(x => '<tr><td>' + escapeHtml(x.nombre) + '</td><td style="text-align:right;">' + fmt$(x.monto) + '</td></tr>').join('');
   return '<div style="margin-top:14px;"><div style="font-weight:600;margin-bottom:4px;">' + titulo + '</div>' +
     '<table class="rep-tbl"><tbody>' + body + '</tbody></table></div>';
+}
+
+function renderReporteRenasteHTML(r) {
+  let h = '<div class="rep-doc">';
+  h += '<div class="rep-head"><div><div class="brand">RENASTÉ · VALOR REAL</div>' +
+       '<div class="sub">Lo que le corresponde a Renasté (bruto, con IVA) · ' + escapeHtml(r.desde) + ' — ' + escapeHtml(r.hasta) + '</div></div>' +
+       '<div style="text-align:right;"><div class="muted small">Total Renasté</div><div style="font-size:1.4rem;font-weight:700;">' + fmt$(r.totalBruto) + '</div></div></div>';
+  h += '<div class="muted small" style="margin-top:6px;">Valor económico que le corresponde a Renasté — no lo recaudado en sus terminales. Cirugías: costo real de Renasté (sin el excedente del Dr), por fecha de cierre. Líneas Renasté: por fecha de cobro.</div>';
+
+  h += _tablaSimple('Por concepto', r.porLinea);
+
+  if (r.lineas && r.lineas.length) {
+    let body = r.lineas.map(m => '<tr><td>' + escapeHtml(m.fecha) + '</td><td>' + escapeHtml(m.paciente) + '</td><td>' + escapeHtml((m.linea || '') + (m.tratamiento ? ' · ' + m.tratamiento : '')) + '</td><td style="text-align:right;">' + fmt$(m.montoBruto) + '</td></tr>').join('');
+    h += '<div style="margin-top:14px;"><div style="font-weight:600;margin-bottom:4px;">Líneas Renasté (cobro directo)</div>' +
+      '<table class="rep-tbl"><thead><tr><th>Fecha</th><th>Paciente</th><th>Concepto</th><th style="text-align:right;">Monto</th></tr></thead><tbody>' + body + '</tbody></table></div>';
+  }
+  if (r.cirugias && r.cirugias.length) {
+    let body = r.cirugias.map(m => '<tr><td>' + escapeHtml(m.fecha) + '</td><td>' + escapeHtml(m.paciente) + '</td><td>' + escapeHtml(m.procedimiento) + '</td><td style="text-align:right;">' + fmt$(m.montoBruto) + '</td></tr>').join('');
+    h += '<div style="margin-top:14px;"><div style="font-weight:600;margin-bottom:4px;">Cirugías (costo real Renasté · folios cerrados)</div>' +
+      '<table class="rep-tbl"><thead><tr><th>Cierre</th><th>Paciente</th><th>Procedimiento</th><th style="text-align:right;">Costo Renasté</th></tr></thead><tbody>' + body + '</tbody></table></div>';
+  }
+  if ((!r.lineas || !r.lineas.length) && (!r.cirugias || !r.cirugias.length)) {
+    h += '<div class="muted" style="margin-top:14px;">No hay movimientos de Renasté en este periodo.</div>';
+  }
+  h += '</div>';
+  return h;
 }
 
 function renderReporteHTML(r) {
