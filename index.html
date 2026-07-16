@@ -2065,8 +2065,9 @@ function confirmarSplitCirugia() {
 // ============================================================
 const fmt$ = n => '$' + Number(n || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-// ⬇⬇ INTERRUPTOR: en pruebas = false (opcional). En producción cámbialo a true para EXIGIR comprobantes. ⬇⬇
-const COMPROBANTES_OBLIGATORIOS = false;
+// ⬇⬇ INTERRUPTOR: true = EXIGIR voucher/comprobante en tarjeta y transferencia antes de avanzar.
+// (El efectivo y la cortesía NUNCA piden comprobante aquí; el efectivo se cuadra en el Corte de caja.) ⬇⬇
+const COMPROBANTES_OBLIGATORIOS = true;
 
 let COMP_ITEMS = [];
 let RECIBO_IMPRESO = false;
@@ -2599,6 +2600,29 @@ function renderReporteHTML(r) {
   let h = '<div class="rep-doc">';
   h += '<div class="rep-head"><div><div class="brand">DR. MIGUEL SOTO · RENASTÉ</div><div class="sub">' + titulo + '</div></div>' +
        '<div style="text-align:right;"><div class="muted small">Total cobrado</div><div style="font-size:1.4rem;font-weight:700;">' + fmt$(r.total) + '</div></div></div>';
+
+  // ── Resumen para corte de caja: efectivo Dr / efectivo Renasté / terminales (electrónico) ──
+  let _efDr = 0, _efRen = 0, _termElec = 0, _filasTerm = '';
+  (r.porTerminal || []).forEach(t => {
+    const nt = _normTxt(t.terminal || '');
+    const esEf = t.esEfectivo || nt.indexOf('efectivo') >= 0;
+    if (esEf) {
+      if (nt.indexOf('renast') >= 0) _efRen += t.monto; else _efDr += t.monto;
+    } else {
+      _termElec += t.monto;
+      _filasTerm += '<tr><td>' + escapeHtml(t.terminal) + '</td><td>' + escapeHtml(t.entidad || '') + '</td><td style="text-align:right;">' + fmt$(t.monto) + '</td></tr>';
+    }
+  });
+  h += '<div style="margin-top:14px;border:1px solid var(--border);border-radius:6px;overflow:hidden;">' +
+    '<div style="background:#1a1a1a;color:#fff;font-weight:600;padding:8px 12px;">Resumen para corte de caja</div>' +
+    '<table class="rep-tbl"><tbody>' +
+      '<tr><td>💵 Efectivo Dr. (Miguel Soto)</td><td style="text-align:right;font-weight:700;">' + fmt$(_efDr) + '</td></tr>' +
+      '<tr><td>💵 Efectivo Renasté</td><td style="text-align:right;font-weight:700;">' + fmt$(_efRen) + '</td></tr>' +
+      '<tr><td>💳 Terminales (electrónico)</td><td style="text-align:right;font-weight:700;">' + fmt$(_termElec) + '</td></tr>' +
+    '</tbody></table>' +
+    (_filasTerm ? '<div style="padding:2px 12px 0;"><div class="muted small" style="margin:6px 0 2px;">Desglose de terminales electrónicas</div>' +
+      '<table class="rep-tbl"><thead><tr><th>Terminal</th><th>Entidad</th><th style="text-align:right;">Monto</th></tr></thead><tbody>' + _filasTerm + '</tbody></table></div>' : '') +
+    '</div>';
 
   // Entidad
   h += _tablaSimple('Por entidad fiscal', r.porEntidad);
