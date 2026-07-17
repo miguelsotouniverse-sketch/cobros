@@ -551,16 +551,35 @@ const $ = id => document.getElementById(id);
 const show = id => $(id).classList.remove('hidden');
 const hide = id => $(id).classList.add('hidden');
 
-// Efectivo: no se pregunta terminal; entra a Caja Dr. (o Caja Renasté si es la Dra. Damián, cuyo dinero es de Renasté)
+// Efectivo: se ELIGE la caja (Efectivo Dr. vs Efectivo Renasté). Default según la línea, pero editable
+// (ej. una depilación/Energy Devices que sea de Renasté puede mandarse a Caja Renasté).
+const _CAJAS_EFECTIVO = ['Efectivo Dr.', 'Efectivo Renasté'];
+function _defaultCajaEfectivo() { return _esLineaDamian($('linea').value) ? 'Efectivo Renasté' : 'Efectivo Dr.'; }
 function aplicaEfectivoTerminal() {
   if ($('metodo').value === 'Efectivo') {
-    $('terminal').value = _esLineaDamian($('linea').value) ? 'Efectivo Renasté' : 'Efectivo Dr.';
-    hide('grupoTerminal');
-  } else { show('grupoTerminal'); }
+    var prev = $('terminal').value;
+    fill('terminal', _CAJAS_EFECTIVO);
+    $('terminal').value = (_CAJAS_EFECTIVO.indexOf(prev) >= 0) ? prev : _defaultCajaEfectivo();
+    show('grupoTerminal');
+  } else {
+    var cur = $('terminal').value;
+    fill('terminal', catalogos.terminales);
+    if (catalogos.terminales.indexOf(cur) >= 0 && _CAJAS_EFECTIVO.indexOf(cur) < 0) $('terminal').value = cur;
+    show('grupoTerminal');
+  }
 }
 function aplicaEfectivoTerminalTrat() {
-  if ($('metodoTrat').value === 'Efectivo') { $('terminalTrat').value = _esLineaDamian($('linea').value) ? 'Efectivo Renasté' : 'Efectivo Dr.'; hide('grupoTerminalTrat'); }
-  else { show('grupoTerminalTrat'); }
+  if ($('metodoTrat').value === 'Efectivo') {
+    var prev = $('terminalTrat').value;
+    fill('terminalTrat', _CAJAS_EFECTIVO);
+    $('terminalTrat').value = (_CAJAS_EFECTIVO.indexOf(prev) >= 0) ? prev : _defaultCajaEfectivo();
+    show('grupoTerminalTrat');
+  } else {
+    var cur = $('terminalTrat').value;
+    fill('terminalTrat', catalogos.terminales);
+    if (catalogos.terminales.indexOf(cur) >= 0 && _CAJAS_EFECTIVO.indexOf(cur) < 0) $('terminalTrat').value = cur;
+    show('grupoTerminalTrat');
+  }
 }
 // Médico titular y Operativo dependen de la línea de negocio.
 // titular = quién es el médico responsable; operativo = quién atiende/realiza.
@@ -836,6 +855,8 @@ function initApp() {
     show('btn-corte');
     show('btn-balance');
   }
+  // Estado inicial de la caja de efectivo (muestra el selector Efectivo Dr. / Efectivo Renasté)
+  aplicaEfectivoTerminal(); aplicaEfectivoTerminalTrat();
 }
 
 async function bootstrap() {
@@ -1204,6 +1225,7 @@ function nuevoCobro() {
   $('condicion').disabled = false;
   DATOS_BLOQUEADOS = false;
   show('grupoTerminal'); show('grupoTerminalTrat');
+  aplicaEfectivoTerminal(); aplicaEfectivoTerminalTrat();
   $('pagoDistinto').checked = false;
   limpiarErrores();
   hide('pacSel'); hide('boxTC'); hide('previewMXN'); hide('msg'); hide('boxNumFactura'); hide('boxPagoTrat'); hide('histBox'); hide('boxAutoriza'); show('pacLibreLink');
