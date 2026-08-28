@@ -431,6 +431,7 @@
           <button class="btn btn-secondary rep-tab" data-rep="semana" style="width:auto;margin-top:0;" onclick="repTab('semana')">Semanal</button>
           <button class="btn btn-secondary rep-tab" data-rep="mes" style="width:auto;margin-top:0;" onclick="repTab('mes')">Mensual</button>
           <button class="btn btn-secondary rep-tab" data-rep="renaste" style="width:auto;margin-top:0;" onclick="repTab('renaste')">Renasté (real)</button>
+          <button class="btn btn-secondary rep-tab" data-rep="vouchers" style="width:auto;margin-top:0;" onclick="repTab('vouchers')">Vouchers</button>
         </div>
         <div id="repCtrlDia" class="grid2">
           <div class="form-group"><label class="lbl">Fecha</label><input type="date" id="repFecha"></div>
@@ -2528,6 +2529,12 @@ function repTab(modo) {
     b.classList.toggle('btn-secondary', b.dataset.rep !== modo);
   });
   if (modo === 'dia') { show('repCtrlDia'); hide('repCtrlRango'); }
+  else if (modo === 'vouchers') {
+    // Vouchers: rango de fechas, por defecto HOY (desde = hasta = hoy)
+    hide('repCtrlDia'); show('repCtrlRango');
+    const hoyV = new Date().toISOString().slice(0, 10);
+    $('repDesde').value = hoyV; $('repHasta').value = hoyV;
+  }
   else {
     hide('repCtrlDia'); show('repCtrlRango');
     const hoy = new Date();
@@ -2551,6 +2558,17 @@ function _isoToDMY(iso) { if (!iso) return ''; const p = iso.split('-'); return 
 async function generarReporte() {
   const msg = $('repMsg'); msg.style.color = ''; msg.textContent = 'Generando…';
   let r;
+  if (REP_MODO === 'vouchers') {
+    const d = $('repDesde').value, h = $('repHasta').value;
+    if (!d || !h) { msg.textContent = 'Elige el rango de fechas.'; return; }
+    r = await callAPI('evidencias', { desde: _isoToDMY(d), hasta: _isoToDMY(h) });
+    if (!r.ok) { msg.style.color = 'var(--error)'; msg.textContent = r.error || 'Error al cargar.'; return; }
+    msg.textContent = '';
+    $('repResultadoCard').style.display = 'block';
+    $('repResultado').innerHTML = renderVouchersHTML(r);
+    window.scrollTo(0, document.getElementById('repResultadoCard').offsetTop - 20);
+    return;
+  }
   if (REP_MODO === 'renaste') {
     const d = $('repDesde').value, h = $('repHasta').value;
     if (!d || !h) { msg.textContent = 'Elige el rango de fechas.'; return; }
@@ -2654,6 +2672,47 @@ function descargarExcelRenaste() {
   XLSX.utils.book_append_sheet(wb, ws, 'Renasté');
   const limpio = s => String(s || '').replace(/\//g, '-');
   XLSX.writeFile(wb, 'Renaste_' + limpio(r.desde) + '_a_' + limpio(r.hasta) + '.xlsx');
+}
+
+function renderVouchersHTML(r) {
+  const data = r.data || [];
+  let h = '<div class="rep-doc">';
+  h += '<div class="rep-head"><div><div class="brand">VOUCHERS / COMPROBANTES</div>' +
+       '<div class="sub">' + escapeHtml(r.desde || '') + (r.hasta && r.hasta !== r.desde ? ' — ' + escapeHtml(r.hasta) : '') + '</div></div>' +
+       '<div style="text-align:right;"><div class="muted small">Total</div><div style="font-size:1.4rem;font-weight:700;">' + data.length + '</div></div></div>';
+  if (!data.length) {
+    h += '<div class="muted" style="margin-top:14px;">No hay comprobantes capturados en este periodo.</div></div>';
+    return h;
+  }
+  h += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-top:14px;">';
+  data.forEach(v => {
+    const url = v.driveUrl || '';
+    const fid = v.driveFileId || '';
+    const thumb = fid ? 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(fid) + '&sz=w400' : '';
+    const abrir = url ? '<a href="' + escapeHtml(url) + '" target="_blank" rel="noopener" class="link">Abrir</a>' : '<span class="muted small">sin link</span>';
+    const media = thumb
+      ? '<a href="' + escapeHtml(url || '#') + '" target="_blank" rel="noopener" style="display:block;background:#f0ece5;">' +
+          '<img src="' + thumb + '" style="width:100%;height:150px;object-fit:cover;display:block;" ' +
+            'onerror="this.style.display=\'none\';this.parentNode.querySelector(\'.vth-fb\').style.display=\'flex\';">' +
+          '<div class="vth-fb" style="display:none;height:150px;align-items:center;justify-content:center;color:var(--text-muted);">📎 Ver comprobante</div>' +
+        '</a>'
+      : '<div style="height:150px;background:#f0ece5;display:flex;align-items:center;justify-content:center;color:var(--text-muted);">📎 Sin imagen</div>';
+    h += '<div style="border:1px solid var(--border-soft);border-radius:8px;overflow:hidden;">' +
+      media +
+      '<div style="padding:8px 10px;">' +
+        '<div style="font-weight:600;font-size:0.9rem;">' + escapeHtml(v.paciente || '(sin nombre)') + '</div>' +
+        '<div class="muted small">' + escapeHtml(v.folioREC || '') + ' · ' + escapeHtml(v.fecha || '') + '</div>' +
+        '<div class="muted small">' + escapeHtml((v.tipo || '') + (v.terminal ? ' · ' + v.terminal : '')) + '</div>' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">' +
+          '<b>' + fmt$(v.montoMXN) + '</b>' + abrir +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  });
+  h += '</div>';
+  h += '<div class="muted small" style="margin-top:12px;">Si no cargan las miniaturas, es porque los archivos están en el Drive del Dr.; ábrelos con esa cuenta o pide que te compartan la carpeta "Comprobantes y Conciliación · Cobros".</div>';
+  h += '</div>';
+  return h;
 }
 
 function renderReporteRenasteHTML(r) {
