@@ -967,9 +967,12 @@ async function verHistorial() {
   }
   let html = '<div class="hh">Historial de pagos · ' + escapeHtml(PAC.nombre) + '</div>';
   r.data.forEach(h => {
+    const voucherLink = h.voucherUrl
+      ? ' · <a href="' + escapeHtml(h.voucherUrl) + '" target="_blank" rel="noopener" class="link">📎 voucher</a>'
+      : '';
     html += '<div class="hist-row">' +
       '<div><div class="hl">' + escapeHtml(h.tratamiento || h.linea) + '</div>' +
-      '<div class="hm">' + escapeHtml(h.fecha) + ' · ' + escapeHtml(h.folio) + ' · ' + escapeHtml(h.condicion || '') + ' · ' + escapeHtml(h.metodo || '') + '</div></div>' +
+      '<div class="hm">' + escapeHtml(h.fecha) + ' · ' + escapeHtml(h.folio) + ' · ' + escapeHtml(h.condicion || '') + ' · ' + escapeHtml(h.metodo || '') + voucherLink + '</div></div>' +
       '<div class="hl">' + money(h.montoMXN) + '</div>' +
     '</div>';
   });
