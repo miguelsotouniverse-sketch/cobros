@@ -359,6 +359,12 @@
 
         <div class="form-group"><label class="lbl">Observaciones</label><input type="text" id="obs" placeholder="Notas del cobro"></div>
 
+        <div class="card hidden" id="voucherPreCard" style="margin-bottom:16px;border:1px solid var(--accent);">
+          <div class="section-label serif" style="margin-top:0;">📎 Voucher obligatorio</div>
+          <div class="muted small" style="margin-bottom:10px;">Adjunta el voucher de la terminal o el comprobante de transferencia de cada cobro electrónico. Sin esto no se puede registrar. (El efectivo y la cortesía no lo requieren.)</div>
+          <div id="voucherPreArea"></div>
+        </div>
+
         <button class="btn btn-primary" id="btnCobrar" onclick="enviarCobro()">Registrar cobro</button>
         <div id="msg" class="alert alert-error hidden"></div>
       </div>
@@ -1039,6 +1045,17 @@ async function enviarCobro() {
     observaciones: [comun.observaciones, t.obsDescuento].filter(Boolean).join(' · ')
   }));
 
+  // ── BLOQUEO: voucher obligatorio ANTES de registrar (tarjeta / transferencia) ──
+  _ensureUids();
+  const _elec = CARRITO.filter(t => _requiereVoucher(t.metodo, t.condicion, t.monto));
+  const _faltanV = _elec.filter(t => !VOUCHERS_PRE[t._uid]);
+  if (_faltanV.length) {
+    renderVoucherPre();
+    show('voucherPreCard');
+    const _vc = document.getElementById('voucherPreCard'); if (_vc) _vc.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return showMsg('Falta adjuntar el voucher/comprobante de ' + _faltanV.length + ' cobro(s) con tarjeta o transferencia. Sin eso no se puede registrar.');
+  }
+
   ENVIANDO = true;
   const b = $('btnCobrar');
   b.disabled = true; b.textContent = 'Registrando…';
@@ -1050,6 +1067,13 @@ async function enviarCobro() {
   pintarReparto(r.reparto || [], r.desglosesReales || {});
   RECIBO_IMPRESO = false;
   renderComprobantes(r.recibos || [], cobros, comun);
+  // Inyecta los vouchers ya adjuntados (mismo orden: ítems electrónicos del carrito) y los sube automáticamente
+  try {
+    const _preFiles = [];
+    CARRITO.forEach(t => { if (_requiereVoucher(t.metodo, t.condicion, t.monto)) _preFiles.push(VOUCHERS_PRE[t._uid] || null); });
+    for (let k = 0; k < COMP_ITEMS.length && k < _preFiles.length; k++) { if (_preFiles[k]) COMP_ITEMS[k].capturedFile = _preFiles[k]; }
+    if (COMP_ITEMS.length && COMP_ITEMS.every(it => it.capturedFile)) { await subirComprobantes(); }
+  } catch (eV) { /* si falla la subida, la tarjeta de comprobantes queda lista para reintentar */ }
   _gateNuevoCobro();
   hide('view-cobro');
   show('view-recibo');
@@ -1212,6 +1236,7 @@ function nuevoCobro() {
   COTIZACIONES_PAC = [];
   PAQUETES_PAC = [];
   MODO_COT = 'cirugia';
+  VOUCHERS_PRE = {};   // limpia los vouchers pre-capturados del cobro anterior
   renderCarrito();
   ['tratamiento', 'monto', 'tc', 'obs', 'buscaPac', 'numFactura', 'precioLista', 'descuento', 'descuentoMonto', 'autorizaDesc'].forEach(id => $(id).value = '');
   $('tratamiento').readOnly = false;
@@ -1500,6 +1525,7 @@ function quitarTratamiento(i) {
 
 function renderCarrito() {
   const money = n => '$' + Number(n).toLocaleString('es-MX', { minimumFractionDigits: 2 });
+  renderVoucherPre();   // muestra/oculta el panel de vouchers según haya cobros electrónicos
   if (!CARRITO.length) {
     show('carritoVacio'); $('carritoLista').innerHTML = ''; hide('carritoTotal');
     return;
@@ -2094,6 +2120,48 @@ const COMPROBANTES_OBLIGATORIOS = true;
 let COMP_ITEMS = [];
 let RECIBO_IMPRESO = false;
 let COMPROBANTES_OK = true;
+
+// ── VOUCHER OBLIGATORIO ANTES DE REGISTRAR (tarjeta / transferencia) ──
+let VOUCHERS_PRE = {};   // File por _uid de cada ítem electrónico del carrito
+let _preUidSeq = 0;
+function _ensureUids() { CARRITO.forEach(t => { if (!t._uid) t._uid = 'u' + (++_preUidSeq) + '-' + Date.now(); }); }
+// ¿Este cobro requiere voucher? (mismo criterio que renderComprobantes: NO efectivo, NO cortesía, monto>0)
+function _requiereVoucher(metodo, condicion, monto) {
+  if (!(Number(monto) > 0)) return false;
+  const m = String(metodo || '').toLowerCase(), c = String(condicion || '').toLowerCase();
+  if (/cortes/.test(m) || /cortes/.test(c)) return false;
+  if (/efectivo/.test(m)) return false;
+  return true;
+}
+function renderVoucherPre() {
+  _ensureUids();
+  const elec = CARRITO.filter(t => _requiereVoucher(t.metodo, t.condicion, t.monto));
+  const cont = $('voucherPreArea');
+  if (!cont) return;
+  if (!elec.length) { cont.innerHTML = ''; hide('voucherPreCard'); return; }
+  cont.innerHTML = elec.map(t => {
+    const tipo = _tipoComprobante(t.metodo);
+    const tiene = !!VOUCHERS_PRE[t._uid];
+    return '<div style="border:1px solid var(--border-soft);border-radius:6px;padding:10px 12px;margin-bottom:8px;">' +
+      '<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;">' +
+        '<div><b>' + tipo.icon + ' ' + escapeHtml(tipo.label) + '</b>' +
+          (t.terminal ? ' <span class="muted small">(' + escapeHtml(t.terminal) + ')</span>' : '') +
+          '<div class="muted small">' + escapeHtml((t.linea || '') + (t.tratamiento ? ' · ' + t.tratamiento : '')) + '</div></div>' +
+        '<div style="font-weight:600;">' + fmt$(t.monto) + '</div>' +
+      '</div>' +
+      '<div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap;">' +
+        (tiene
+          ? '<span style="color:var(--success);font-weight:600;">✓ Voucher adjuntado</span>' +
+            ' <button type="button" class="link" onclick="_quitarVoucherPre(\'' + t._uid + '\')">cambiar</button>'
+          : '<input type="file" accept="image/*,application/pdf" capture="environment" onchange="_setVoucherPreFromInput(\'' + t._uid + '\', this)">' +
+            '<button type="button" class="btn btn-secondary" style="width:auto;margin-top:0;padding:6px 12px;" onclick="_tomarFotoVoucherPre(\'' + t._uid + '\')">📷 Tomar foto</button>') +
+      '</div></div>';
+  }).join('');
+  show('voucherPreCard');
+}
+function _setVoucherPreFromInput(uid, inp) { const f = inp && inp.files && inp.files[0]; if (f) { VOUCHERS_PRE[uid] = f; renderVoucherPre(); } }
+function _tomarFotoVoucherPre(uid) { openCamera('Foto del voucher', (file) => { VOUCHERS_PRE[uid] = file; renderVoucherPre(); }); }
+function _quitarVoucherPre(uid) { delete VOUCHERS_PRE[uid]; renderVoucherPre(); }
 
 // Habilita "Nuevo cobro" solo si ya se imprimió y (en producción) ya se subieron comprobantes
 function _gateNuevoCobro() {
