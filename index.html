@@ -553,6 +553,7 @@ let ESTADO_ACTUAL = null; // último estado de cuenta cargado (para compartir)
 let DATOS_BLOQUEADOS = false; // datos generales bloqueados (abono de una cotización con pagos previos)
 let BUSCANDO = null;
 let ENVIANDO = false;
+let TXN_ID = null;   // id único de esta sesión de cobro (candado anti-duplicados)
 
 const $ = id => document.getElementById(id);
 const show = id => $(id).classList.remove('hidden');
@@ -1063,7 +1064,8 @@ async function enviarCobro() {
   ENVIANDO = true;
   const b = $('btnCobrar');
   b.disabled = true; b.textContent = 'Registrando…';
-  const r = await callAPI('cobroMultiple', { cobros });
+  if (!TXN_ID) TXN_ID = 'tx-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
+  const r = await callAPI('cobroMultiple', { cobros, txnId: TXN_ID });
   ENVIANDO = false;
   b.disabled = false; b.textContent = 'Registrar cobro';
   if (!r.ok) return showMsg(r.error || 'No se pudo registrar.');
@@ -1241,6 +1243,7 @@ function nuevoCobro() {
   PAQUETES_PAC = [];
   MODO_COT = 'cirugia';
   VOUCHERS_PRE = {};   // limpia los vouchers pre-capturados del cobro anterior
+  TXN_ID = null;       // nueva sesión de cobro → nuevo id de transacción
   renderCarrito();
   ['tratamiento', 'monto', 'tc', 'obs', 'buscaPac', 'numFactura', 'precioLista', 'descuento', 'descuentoMonto', 'autorizaDesc'].forEach(id => $(id).value = '');
   $('tratamiento').readOnly = false;
