@@ -1093,11 +1093,15 @@ function pintarReciboMultiple(recibos, comun, estadosCuenta) {
   const money = n => '$' + Number(n).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   estadosCuenta = estadosCuenta || {};
   const d0 = recibos[0] || {};
+  // Método de pago: si todos los tratamientos usan el mismo, se muestra arriba; si varían, va por tratamiento
+  const metodosUnicos = Array.from(new Set(recibos.map(d => String(d.metodo || '').trim()).filter(Boolean)));
+  const metodoUnico = metodosUnicos.length === 1 ? metodosUnicos[0] : null;
   let filas =
     row('Fecha', d0.fecha) +
     row('Paciente', comun.nombrePaciente) +
     (comun.medico ? row('Médico', comun.medico) : '') +
-    (comun.condicion ? row('Condición', comun.condicion) : '');
+    (comun.condicion ? row('Condición', comun.condicion) : '') +
+    (metodoUnico ? row('Método de pago', metodoUnico) : '');
 
   // Detalle por tratamiento
   filas += '<tr><td class="k" colspan="2" style="padding-top:12px;font-weight:600;">Tratamientos</td></tr>';
@@ -1107,8 +1111,9 @@ function pintarReciboMultiple(recibos, comun, estadosCuenta) {
   recibos.forEach(d => {
     totalMXN += Number(d.montoMXN || 0);
     if (d.moneda === 'USD' && d.montoUSD) { totalUSD += Number(d.montoUSD); hayUSD = true; }
-    const detalle = (d.linea || '') + (d.tratamiento ? ' · ' + d.tratamiento : '') +
-                    ' (' + escapeHtml(d.folio) + ')';
+    const metodoLinea = (!metodoUnico && d.metodo) ? ' · ' + d.metodo : '';
+    const detalle = (d.linea || '') + (d.tratamiento ? ' · ' + d.tratamiento : '') + metodoLinea +
+                    ' (' + d.folio + ')';
     const montoTxt = (d.moneda === 'USD' && d.montoUSD)
       ? money(d.montoUSD) + ' USD  (' + money(d.montoMXN) + ' MXN)'
       : money(d.montoMXN);
