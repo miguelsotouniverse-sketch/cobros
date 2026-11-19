@@ -226,6 +226,7 @@
     <button class="salir hidden" id="btn-conciliacion" onclick="abrirConciliacion()">conciliación</button>
     <button class="salir hidden" id="btn-corte" onclick="abrirCorte()">corte de caja</button>
     <button class="salir hidden" id="btn-balance" onclick="abrirBalance()">balance deuda</button>
+    <button class="salir" id="btn-correccion" onclick="abrirCorreccion()">corregir cobro</button>
     <button class="salir hidden" id="btn-volver-cobro" onclick="volverACobro()">← cobros</button>
     <button class="salir" id="btn-salir">salir</button>
   </header>
@@ -403,6 +404,38 @@
       <div class="view-subtitle">Cobros marcados con factura que aún no tienen número</div>
       <div class="card">
         <div id="facturasLista"></div>
+      </div>
+    </section>
+
+    <!-- CORREGIR / ANULAR COBRO -->
+    <section id="view-correccion" class="hidden">
+      <h1 class="view-title serif">Corregir / anular cobro</h1>
+      <div class="view-subtitle">Un cobro mal capturado no se borra: se anula dejando huella (quién, cuándo y por qué). El sistema deshace lo que corresponde automáticamente.</div>
+      <div class="card">
+        <div class="form-group">
+          <label class="lbl">Folio del cobro a anular</label>
+          <input type="text" id="corrFolio" placeholder="El folio que aparece en el recibo" autocomplete="off" style="text-transform:uppercase;">
+        </div>
+        <div class="acciones" style="margin-top:4px;">
+          <button class="btn btn-primary" id="btnBuscarCorr" style="width:auto;margin-top:0;" onclick="buscarCobroCorreccion()">Buscar cobro</button>
+        </div>
+        <div class="muted small" id="corrMsg" style="margin-top:8px;"></div>
+      </div>
+
+      <div class="card" id="corrDetalleCard" style="display:none;">
+        <div id="corrDetalle"></div>
+        <div id="corrBloqueo" style="display:none;"></div>
+        <div id="corrFormAnular" style="display:none;">
+          <div class="form-group" style="margin-top:14px;">
+            <label class="lbl">Motivo de la anulación (obligatorio)</label>
+            <textarea id="corrMotivo" rows="2" placeholder="Ej. capturado en paciente equivocado / monto incorrecto / cobro duplicado" style="width:100%;resize:vertical;"></textarea>
+          </div>
+          <div class="acciones" style="margin-top:4px;">
+            <button class="btn btn-danger" id="btnConfirmarReversa" style="width:auto;margin-top:0;background:#b42318;color:#fff;" onclick="confirmarReversa()">Anular este cobro</button>
+            <button class="btn btn-secondary" style="width:auto;margin-top:0;" onclick="limpiarCorreccion()">Cancelar</button>
+          </div>
+          <div class="muted small" id="corrResMsg" style="margin-top:8px;"></div>
+        </div>
       </div>
     </section>
 
@@ -1667,9 +1700,10 @@ async function abrirFacturas() {
 }
 
 function volverACobro() {
-  hide('view-facturas'); hide('view-recibo'); hide('view-reportes'); hide('view-conciliacion'); hide('view-corte'); hide('view-balance'); hide('view-estado');
+  hide('view-facturas'); hide('view-recibo'); hide('view-reportes'); hide('view-conciliacion'); hide('view-corte'); hide('view-balance'); hide('view-estado'); hide('view-correccion');
   show('view-cobro');
   hide('btn-volver-cobro');
+  show('btn-correccion');   // corregir cobro: disponible para todos (incluida recepción)
   const rol = catalogos.usuario && catalogos.usuario.rol ? catalogos.usuario.rol : 'cobros';
   if (rol === 'admin' || rol === 'facturacion' || rol === 'facturación') {
     show('btn-facturas'); show('btn-reportes'); show('btn-conciliacion'); show('btn-corte'); show('btn-balance');
@@ -1678,8 +1712,103 @@ function volverACobro() {
 }
 
 function _ocultarBotonesNav() {
-  hide('btn-facturas'); hide('btn-reportes'); hide('btn-conciliacion'); hide('btn-corte'); hide('btn-balance');
+  hide('btn-facturas'); hide('btn-reportes'); hide('btn-conciliacion'); hide('btn-corte'); hide('btn-balance'); hide('btn-correccion');
   show('btn-volver-cobro');
+}
+
+// ===== Corregir / anular cobro =====
+var _corrFolioActual = '';
+
+function abrirCorreccion() {
+  hide('view-cobro'); hide('view-recibo'); hide('view-facturas'); hide('view-estado'); hide('view-reportes'); hide('view-conciliacion'); hide('view-corte'); hide('view-balance');
+  show('view-correccion'); _ocultarBotonesNav();
+  limpiarCorreccion();
+  $('corrFolio').value = '';
+  window.scrollTo(0, 0);
+}
+
+function limpiarCorreccion() {
+  _corrFolioActual = '';
+  $('corrDetalleCard').style.display = 'none';
+  $('corrDetalle').innerHTML = '';
+  $('corrBloqueo').style.display = 'none';
+  $('corrBloqueo').innerHTML = '';
+  $('corrFormAnular').style.display = 'none';
+  $('corrMotivo').value = '';
+  $('corrResMsg').textContent = '';
+  $('corrMsg').textContent = '';
+}
+
+async function buscarCobroCorreccion() {
+  var folio = String($('corrFolio').value || '').trim().toUpperCase();
+  limpiarCorreccion();
+  $('corrFolio').value = folio;
+  if (!folio) { $('corrMsg').textContent = 'Escribe el folio del cobro.'; return; }
+  var btn = $('btnBuscarCorr');
+  btn.disabled = true; btn.textContent = 'Buscando…';
+  $('corrMsg').textContent = '';
+  var r = await callAPI('reversarCobro', { folio: folio, dryRun: true });
+  btn.disabled = false; btn.textContent = 'Buscar cobro';
+  // Un cobro "enredado" llega con bloqueado:true (a veces con ok:false): se muestra la tarjeta de bloqueo, no un error pelón.
+  if (!r || (r.ok === false && !r.bloqueado)) {
+    $('corrMsg').textContent = (r && r.error) ? r.error : 'No se encontró el cobro.';
+    return;
+  }
+  var money = function(n){ return '$' + Number(n||0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+  var info = r.info || {};
+  _corrFolioActual = info.folio || folio;
+  var h = '';
+  h += '<div style="font-weight:600;font-size:15px;margin-bottom:8px;">Cobro ' + escapeHtml(_corrFolioActual) + '</div>';
+  h += '<table style="width:100%;border-collapse:collapse;font-size:14px;">';
+  var row = function(k,v){ return '<tr><td style="padding:3px 8px 3px 0;color:#667085;white-space:nowrap;vertical-align:top;">' + k + '</td><td style="padding:3px 0;font-weight:500;">' + v + '</td></tr>'; };
+  if (info.fecha) h += row('Fecha', escapeHtml(String(info.fecha)));
+  if (info.paciente) h += row('Paciente', escapeHtml(String(info.paciente)));
+  if (info.linea) h += row('Línea', escapeHtml(String(info.linea)));
+  if (info.tratamiento) h += row('Tratamiento', escapeHtml(String(info.tratamiento)));
+  if (info.metodo) h += row('Método', escapeHtml(String(info.metodo)) + (info.terminal ? ' · ' + escapeHtml(String(info.terminal)) : ''));
+  h += row('Monto', '<b>' + money(info.monto) + '</b>');
+  h += '</table>';
+  if (r.resumen) {
+    h += '<div style="margin-top:10px;padding:10px 12px;background:#f8f9fb;border-radius:8px;font-size:13px;color:#475467;white-space:pre-line;">' + escapeHtml(String(r.resumen)) + '</div>';
+  }
+  $('corrDetalle').innerHTML = h;
+  $('corrDetalleCard').style.display = 'block';
+
+  if (r.bloqueado) {
+    $('corrBloqueo').style.display = 'block';
+    $('corrBloqueo').innerHTML =
+      '<div style="margin-top:12px;padding:12px 14px;background:#fef3f2;border:1px solid #fecdca;border-radius:8px;color:#b42318;font-size:14px;">' +
+      '<b>No se puede anular desde aquí.</b><br>' + escapeHtml(String(r.mensaje || r.error || 'Este cobro ya está enredado con otros movimientos.')) +
+      '</div>';
+    $('corrFormAnular').style.display = 'none';
+  } else {
+    $('corrFormAnular').style.display = 'block';
+  }
+}
+
+async function confirmarReversa() {
+  var motivo = String($('corrMotivo').value || '').trim();
+  if (!_corrFolioActual) { $('corrResMsg').textContent = 'Primero busca un cobro.'; return; }
+  if (motivo.length < 4) { $('corrResMsg').textContent = 'Escribe el motivo de la anulación.'; return; }
+  if (!confirm('¿Anular el cobro ' + _corrFolioActual + '?\n\nEsto deja un asiento de reversa con tu nombre y el motivo. No se puede deshacer.')) return;
+  var btn = $('btnConfirmarReversa');
+  btn.disabled = true; btn.textContent = 'Anulando…';
+  $('corrResMsg').textContent = '';
+  var r = await callAPI('reversarCobro', { folio: _corrFolioActual, motivo: motivo });
+  btn.disabled = false; btn.textContent = 'Anular este cobro';
+  if (!r || r.ok === false) {
+    $('corrResMsg').style.color = '#b42318';
+    $('corrResMsg').textContent = (r && (r.mensaje || r.error)) ? (r.mensaje || r.error) : 'No se pudo anular.';
+    return;
+  }
+  $('corrFormAnular').style.display = 'none';
+  $('corrBloqueo').style.display = 'none';
+  $('corrDetalle').innerHTML =
+    '<div style="padding:14px;background:#ecfdf3;border:1px solid #abefc6;border-radius:8px;color:#067647;font-size:14px;">' +
+    '<b>Cobro ' + escapeHtml(_corrFolioActual) + ' anulado.</b><br>' +
+    escapeHtml(String(r.mensaje || 'Se registró el asiento de reversa con tu nombre y el motivo.')) +
+    '</div>';
+  _corrFolioActual = '';
 }
 
 function abrirReportes() {
@@ -2976,7 +3105,6 @@ async function guardarConciliacion() {
     <a data-app="agenda"        href="https://agenda.miguelsotomd.com">Agenda</a>
     <a data-app="cobros"        href="https://cobros.miguelsotomd.com">Cobros</a>
     <a data-app="paquetes"      href="https://paquetes.miguelsotomd.com">Paquetes</a>
-    <a data-app="anestesia"     href="https://anestesia.miguelsotomd.com">Anestesia</a>
   </div>
   <button class="ms-trigger" type="button" aria-label="Cambiar de app">
     <span class="ms-mark">MS</span>
