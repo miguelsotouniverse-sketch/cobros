@@ -625,12 +625,12 @@ function aplicaEfectivoTerminalTrat() {
 // Médico titular y Operativo dependen de la línea de negocio.
 // titular = quién es el médico responsable; operativo = quién atiende/realiza.
 var MEDICOS_LINEA = {
-  'Inyectables':                   { titular: ['Dr. Miguel Soto', 'Dra. Laura Tagle', 'Dra. Samantha Contreras'], operativo: ['Dr. Miguel Soto', 'Dra. Laura Tagle', 'Dra. Samantha Contreras'] },
-  'Fibrosis Zero':                 { titular: ['Dr. Miguel Soto'], operativo: ['Dra. Laura Tagle', 'Dra. Samantha Contreras', 'LE Ruth Damian'] },
-  'Microneedling':                 { titular: ['Dr. Miguel Soto', 'Dra. Laura Tagle', 'Dra. Samantha Contreras'], operativo: ['Dra. Laura Tagle', 'Dra. Samantha Contreras'] },
-  'Medicamentos y Dermocosmética': { titular: ['Dr. Miguel Soto', 'Dra. Laura Tagle', 'Dra. Samantha Contreras'], operativo: ['Dr. Miguel Soto', 'Dra. Laura Tagle', 'Dra. Samantha Contreras'] },
-  'Consulta':                      { titular: ['Dr. Miguel Soto', 'Dra. Laura Tagle', 'Dra. Samantha Contreras', 'Staff médico'], operativo: ['Dr. Miguel Soto', 'Dra. Laura Tagle', 'Dra. Samantha Contreras', 'Staff médico'] },
-  'Paquetes':                      { titular: ['Dr. Miguel Soto', 'Dra. Laura Tagle', 'Dra. Samantha Contreras'], operativo: ['Dr. Miguel Soto', 'Dra. Laura Tagle', 'Dra. Samantha Contreras', 'LE Ruth Damian'] }
+  'Inyectables':                   { titular: ['Dr. Miguel Soto', 'Dra. Nicole'], operativo: ['Dr. Miguel Soto', 'Dra. Nicole'] },
+  'Fibrosis Zero':                 { titular: ['Dr. Miguel Soto'], operativo: ['Dra. Nicole', 'LE Ruth Damian'] },
+  'Microneedling':                 { titular: ['Dr. Miguel Soto', 'Dra. Nicole'], operativo: ['Dra. Nicole'] },
+  'Medicamentos y Dermocosmética': { titular: ['Dr. Miguel Soto', 'Dra. Nicole'], operativo: ['Dr. Miguel Soto', 'Dra. Nicole'] },
+  'Consulta':                      { titular: ['Dr. Miguel Soto', 'Dra. Nicole', 'Staff médico'], operativo: ['Dr. Miguel Soto', 'Dra. Nicole', 'Staff médico'] },
+  'Paquetes':                      { titular: ['Dr. Miguel Soto', 'Dra. Nicole'], operativo: ['Dr. Miguel Soto', 'Dra. Nicole', 'LE Ruth Damian'] }
 };
 // Re-llena un select preservando la opción ya elegida si sigue en la nueva lista.
 function _fillPreservando(id, arr) {
